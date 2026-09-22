@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmos — Explore the Universe in 3D</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ HEADER ============ -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="brand" id="brandHome" title="Return to home view">
+        <span class="brand-name">Cosmos</span>
+        <span class="brand-beta">beta</span>
+      </button>
+
+      <div class="search-wrap">
+        <input class="search-input" id="searchInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Search 306,000 objects...">
+        <span class="search-icon">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+
+      <button class="icon-btn" id="btnHome" title="Home view">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      </button>
+      <button class="icon-btn" id="btnBack" title="Back" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+      </button>
+      <button class="icon-btn" id="btnForward" title="Forward" disabled>
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+      </button>
+    </div>
+
+    <nav class="topbar-right">
+      <button class="icon-btn" id="btnRoutePanel" title="Plan a trip">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="6" r="2.5"/><path d="M7 16.5 17 7.5" stroke-dasharray="3 3"/></svg>
+      </button>
+      <button class="icon-btn" id="btnSettings" title="Settings">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button class="icon-btn" id="btnTime" title="Time controls">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+      </button>
+      <button class="icon-btn" id="btnOnThisDay" title="On this day">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><line x1="16" y1="2.5" x2="16" y2="6.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="3" y1="9.5" x2="21" y2="9.5"/></svg>
+      </button>
+      <div class="separator"></div>
+      <button class="icon-btn" id="btnMore" title="About">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ============ STAGE ============ -->
+  <main class="stage" id="stage">
+    <canvas id="scene"></canvas>
+
+    <!-- Explore panel -->
+    <section class="panel" id="panel">
+      <button class="panel-close" id="panelClose" title="Close">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
+      <!-- category root -->
+      <div class="panel-view" id="panelRoot">
+        <h1>Explore the Universe</h1>
+        <p class="subtitle">Search and discover celestial objects</p>
+        <div class="browse-label">Browse categories</div>
+        <ul class="category-list" id="categoryList"></ul>
+      </div>
+
+      <!-- category detail -->
+      <div class="panel-view hidden" id="panelDetail">
+        <button class="detail-back" id="detailBack">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg>
+          All categories
+        </button>
+        <h1 id="detailTitle">Category</h1>
+        <p class="subtitle" id="detailSub"></p>
+        <ul class="object-list" id="detailList"></ul>
+      </div>
+    </section>
+
+    <button class="reopen-btn" id="reopenBtn">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      Explore
+    </button>
+
+    <!-- Selected-object info -->
+    <aside class="info-panel hidden" id="infoPanel">
+      <button class="panel-close" id="infoClose" title="Close">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div class="info-head">
+        <span class="info-swatch" id="infoSwatch"></span>
+        <div>
+          <h2 id="infoName">—</h2>
+          <div class="info-type" id="infoType">—</div>
+        </div>
+      </div>
+      <p class="info-desc" id="infoDesc"></p>
+      <dl class="info-stats" id="infoStats"></dl>
+      <div class="info-related hidden" id="infoRelated"></div>
+      <div class="info-actions">
+        <button class="btn primary" id="btnGoto">Fly here</button>
+        <button class="btn" id="btnFollow">Follow</button>
+        <button class="btn" id="btnRoute" title="How long would the trip take?">Trip</button>
+      </div>
+    </aside>
+
+    <!-- Settings popover -->
+    <div class="popover hidden" id="settingsPopover">
+      <div class="popover-title">Display</div>
+      <label class="switch"><input type="checkbox" id="optOrbits" checked><span>Orbit paths</span></label>
+      <label class="switch"><input type="checkbox" id="optLabels" checked><span>Labels</span></label>
+      <label class="switch"><input type="checkbox" id="optMoons" checked><span>Moons</span></label>
+      <label class="switch"><input type="checkbox" id="optBelts" checked><span>Kuiper belt (procedural)</span></label>
+      <label class="switch"><input type="checkbox" id="optMainBelt" checked><span>Main-belt asteroids (JPL)</span></label>
+      <label class="switch"><input type="checkbox" id="optNeo" checked><span>Near-Earth asteroids</span></label>
+      <label class="switch"><input type="checkbox" id="optTrojans" checked><span>Jupiter Trojans</span></label>
+      <label class="switch"><input type="checkbox" id="optTno" checked><span>Trans-Neptunian objects</span></label>
+      <label class="switch"><input type="checkbox" id="optComets" checked><span>Comets</span></label>
+      <label class="switch"><input type="checkbox" id="optOort" checked><span>Oort cloud</span></label>
+      <label class="switch"><input type="checkbox" id="optStars" checked><span>Background stars</span></label>
+      <label class="switch"><input type="checkbox" id="optNgc" checked><span>NGC deep-sky layer</span></label>
+      <label class="switch"><input type="checkbox" id="optGalaxies" checked><span>Galaxies (HyperLEDA)</span></label>
+      <label class="switch"><input type="checkbox" id="optSatellites"><span>Satellites (Celestrak)</span></label>
+      <label class="switch"><input type="checkbox" id="optConstellations" checked><span>Constellation names</span></label>
+      <label class="switch"><input type="checkbox" id="optDeepFields" checked><span>Telescope views (with telescopes)</span></label>
+      <label class="switch"><input type="checkbox" id="optMilkyWay" checked><span>Milky Way glow</span></label>
+      <label class="switch"><input type="checkbox" id="optProbes" checked><span>Spacecraft</span></label>
+      <label class="switch"><input type="checkbox" id="optRealSize"><span>True body sizes</span></label>
+      <div class="popover-title" style="margin-top:10px">More objects</div>
+      <label class="switch"><input type="checkbox" id="optAllStars"><span id="lblAllStars">Deep star field</span></label>
+      <label class="switch"><input type="checkbox" id="optAllGalaxies"><span id="lblAllGalaxies">All galaxies</span></label>
+      <label class="switch"><input type="checkbox" id="optAllSmall"><span id="lblAllSmall">All asteroids &amp; comets</span></label>
+    </div>
+
+    <!-- On this day popover -->
+    <div class="popover wide hidden" id="eventsPopover">
+      <div class="popover-title" id="eventsTitle">On this day</div>
+      <ul class="event-list" id="eventList"></ul>
+    </div>
+
+    <!-- About popover -->
+    <div class="popover wide hidden" id="aboutPopover">
+      <div class="popover-title">About</div>
+      <p class="about-text">
+        A hand-built 3D map of the cosmos — no engine, no libraries, just canvas and
+        orbital mechanics. Planet positions come from JPL's J2000 Keplerian elements,
+        so what you see is where the planets really are on the selected date. Stars sit
+        at their true 3D positions from measured distances; spacecraft positions are
+        extrapolated from their cruise velocities and are approximate.
+      </p>
+      <p class="about-text">
+        Select a telescope to see the patches of sky it stared at, and look at one to
+        zoom in. Distances quoted for the most distant finds are computed from their
+        redshift with a flat ΛCDM cosmology (H₀ = 67.4, Ω<sub>m</sub> = 0.315): the edge
+        of the observable universe lies about 46 billion light years away today.
+      </p>
+      <p class="about-text dim">
+        Drag to orbit · Scroll to zoom · Click an object to select · Double-click to fly there
+      </p>
+    </div>
+
+    <!-- Zoom + scale -->
+    <div class="stage-right">
+      <div class="zoom-controls">
+        <button class="zoom-btn" id="zoomIn" title="Zoom in">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <button class="zoom-btn" id="zoomOut" title="Zoom out">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="scale-readout" id="scaleReadout">—</div>
+    </div>
+
+    <!-- Time bar -->
+    <div class="time-bar" id="timeBar">
+      <button class="icon-btn small" id="btnPlay" title="Play / pause">
+        <svg id="iconPlay" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" class="hidden"><polygon points="7 4 20 12 7 20"/></svg>
+        <svg id="iconPause" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="7" y="4.5" width="3.6" height="15"/><rect x="13.4" y="4.5" width="3.6" height="15"/></svg>
+      </button>
+      <div class="time-date" id="timeDate">—</div>
+      <div class="time-speeds" id="timeSpeeds"></div>
+      <button class="btn tiny" id="btnNow">Now</button>
+    </div>
+
+    <div class="focus-chip hidden" id="focusChip">
+      <span class="focus-dot"></span>
+      <span id="focusName">—</span>
+      <button id="focusClear" title="Stop following">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Trip planner -->
+    <section class="route-panel hidden" id="routePanel">
+      <button class="panel-close" id="routeClose" title="Close">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h2>Plan a trip</h2>
+      <div class="route-row"><label>From</label><div class="picker"><input id="routeFrom" type="text" autocomplete="off" placeholder="Earth"><div class="picker-list" id="routeFromList"></div></div></div>
+      <div class="route-row"><label>To</label><div class="picker"><input id="routeTo" type="text" autocomplete="off" placeholder="Search a destination…"><div class="picker-list" id="routeToList"></div></div></div>
+      <button class="btn tiny" id="routeSwap">Swap</button>
+      <div id="routeResult"></div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+    <div class="hint" id="hint">Drag to orbit · Scroll to zoom · Double-click to fly</div>
+  </main>
+
+</div>
+
+<script src="data.js"></script>
+<!-- bundled catalogues: packed binary in .js so they load from file:// without a server -->
+<script src="catalog-stars.js"></script>
+<script src="catalog-dso.js"></script>
+<script src="catalog-exo.js"></script>
+<script src="catalog-sbdb.js"></script>
+<script src="catalog-gal.js"></script>
+<script src="catalog-sat.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
