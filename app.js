@@ -110,7 +110,9 @@ function fmtDist(au) {
   if (au < 1200) return au.toFixed(au < 10 ? 3 : 2) + ' AU';
   const ly = au / LY_AU;
   if (ly < 1000) return ly.toFixed(ly < 10 ? 3 : 1) + ' light years';
-  return Math.round(ly).toLocaleString() + ' light years';
+  if (ly < 1e6) return Math.round(ly).toLocaleString() + ' light years';
+  if (ly < 1e9) return (ly / 1e6).toFixed(ly < 1e7 ? 2 : ly < 1e8 ? 1 : 0) + ' million light years';
+  return (ly / 1e9).toFixed(1) + ' billion light years';
 }
 function fmtDate(jd) {
   const d = dateFromJd(jd);
@@ -475,6 +477,361 @@ Object.keys(BELTS).forEach(function (key) {
   });
 });
 
+
+/* --- The Milky Way as a whole: a selectable object, and a model of the galaxy
+   for when the camera is far enough out to see it from outside. The model is
+   an impression: arm and bar geometry follow survey measurements (Reid et al.
+   2019 for the arms, a 3.5 kpc bar at 30° to the Sun-centre line), the light is
+   procedural. Rotation is clockwise seen from the north galactic pole, so the
+   trailing arms wind outward counter-clockwise in our frame. --- */
+const MW = (function () {
+  if (typeof MILKY_WAY === 'undefined' || !byId.sgrA) return null;
+  const c = byId.sgrA.fixed || byId.sgrA.pos;            /* the centre is the black hole */
+  const KPC = 1000 * PC_LY * LY_AU;                         /* one kiloparsec in AU */
+  const ex = norm({ x: -c.x, y: -c.y, z: -c.z });           /* centre -> Sun */
+  let ez = galacticToEcl(0, Math.PI / 2);                   /* north galactic pole */
+  const dd = ex.x * ez.x + ex.y * ez.y + ex.z * ez.z;
+  ez = norm({ x: ez.x - dd * ex.x, y: ez.y - dd * ex.y, z: ez.z - dd * ex.z });
+  const ey = cross(ez, ex);                                 /* right-handed with ez up */
+  const toAU = function (u, v, w) {                         /* kpc in the galaxy frame -> AU, ecliptic */
+    return { x: c.x + (u * ex.x + v * ey.x + w * ez.x) * KPC,
+             y: c.y + (u * ex.y + v * ey.y + w * ez.y) * KPC,
+             z: c.z + (u * ex.z + v * ey.z + w * ez.z) * KPC };
+  };
+  const rng = mulberry32(20260925);
+  const g1 = function () { return Math.sqrt(-2 * Math.log(1 - rng() + 1e-12)) * Math.cos(TAU * rng()); };
+  const BAR = -30 * DEG, cb = Math.cos(BAR), sb = Math.sin(BAR);
+
+  /* arms: r = r0 · exp(k·θ), θ counter-clockwise from the Sun's azimuth (radians) */
+  const ARMS = [
+    { name: 'Scutum-Centaurus', r0: 4.5,  k: Math.tan(12 * DEG), t0: -30 * DEG,  t1: 370 * DEG, w: 0.40, amp: 1.0,  hot: 0.55, n: 1900 },
+    { name: 'Perseus',          r0: 9.9,  k: Math.tan(10 * DEG), t0: -210 * DEG, t1: 150 * DEG, w: 0.42, amp: 1.0,  hot: 0.55, n: 1900 },
+    { name: 'Sagittarius-Carina', r0: 6.4, k: Math.tan(12 * DEG), t0: -120 * DEG, t1: 220 * DEG, w: 0.30, amp: 0.7, hot: 0.45, n: 1200 },
+    { name: 'Norma-Outer',      r0: 12.7, k: Math.tan(12 * DEG), t0: -300 * DEG, t1: 40 * DEG,  w: 0.30, amp: 0.55, hot: 0.40, n: 900 },
+    { name: 'Local (Orion)',    r0: 8.35, k: Math.tan(11 * DEG), t0: -28 * DEG,  t1: 42 * DEG,  w: 0.20, amp: 0.45, hot: 0.50, n: 380, spur: true }
+  ];
+  const armFade = function (arm, th, r) {
+    const f1 = arm.spur ? 1 : clamp((th - arm.t0) / (25 * DEG), 0, 1);   /* emerges from the bar */
+    return f1 * clamp((15.5 - r) / 3.5, 0, 1);                           /* dies at the disc edge */
+  };
+
+  /* ---- particles ---- */
+  const parts = [];
+  const addP = function (u, v, w, cls, al) { parts.push({ u: u, v: v, w: w, c: cls, a: al }); };
+  ARMS.forEach(function (arm) {
+    for (let i = 0; i < arm.n * 1.6; i++) {
+      const th = arm.t0 + rng() * (arm.t1 - arm.t0);
+      const r = arm.r0 * Math.exp(arm.k * th);
+      if (r > 15.5 || r < 3.2) continue;
+      const f = armFade(arm, th, r);
+      if (rng() > f) continue;
+      const rr = r + g1() * arm.w, z = g1() * 0.09;
+      const t = rng();
+      addP(rr * Math.cos(th), rr * Math.sin(th), z, t < arm.hot ? 0 : (t < arm.hot + 0.08 ? 3 : 1), 0.55 + 0.45 * rng());
+    }
+  });
+  for (let i = 0; i < 2800; i++) {                          /* the smooth disc, scale length 2.6 kpc */
+    const r = -2.6 * (Math.log(1 - rng()) + Math.log(1 - rng()));
+    if (r > 15 || r < 1.2) continue;
+    const th = rng() * TAU;
+    addP(r * Math.cos(th), r * Math.sin(th), g1() * (0.26 + 0.03 * r), rng() < 0.55 ? 2 : 1, 0.3 + 0.4 * rng());
+  }
+  for (let i = 0; i < 1300; i++) {                          /* bar and boxy bulge */
+    let u, v, w;
+    if (rng() < 0.55) { u = clamp(g1() * 1.6, -3.6, 3.6); v = g1() * 0.5; w = g1() * 0.35; }
+    else { const rr = Math.abs(g1()) * 0.9, ph = rng() * TAU; u = rr * Math.cos(ph); v = rr * Math.sin(ph) * 0.85; w = g1() * 0.55; }
+    addP(u * cb - v * sb, u * sb + v * cb, w, 2, 0.45 + 0.5 * rng());
+  }
+  for (let i = 0; i < 260; i++) {                           /* a sparse stellar halo */
+    const r = 2.5 + Math.abs(g1()) * 7, ph = rng() * TAU, ct = 2 * rng() - 1, st = Math.sqrt(1 - ct * ct);
+    addP(r * st * Math.cos(ph), r * st * Math.sin(ph), r * ct, 2, 0.22);
+  }
+  /* pack, sorted by colour bucket so fillStyle changes only a few times per frame */
+  parts.forEach(function (p) { p.b = p.c * 2 + (p.a < 0.6 ? 0 : 1); });
+  parts.sort(function (p, q) { return p.b - q.b; });
+  const n = parts.length;
+  const px = new Float32Array(n), py = new Float32Array(n), pz = new Float32Array(n);
+  const bucketStart = new Int32Array(9);
+  let cur = -1;
+  parts.forEach(function (p, i) {
+    const P = toAU(p.u, p.v, p.w); px[i] = P.x; py[i] = P.y; pz[i] = P.z;
+    while (cur < p.b) { cur++; bucketStart[cur] = i; }
+  });
+  while (cur < 8) { cur++; bucketStart[cur] = n; }
+  const COLS = ['170,190,255', '236,236,250', '255,224,176', '255,170,190'];
+  const styles = [];
+  for (let b = 0; b < 8; b++) styles.push({ col: COLS[b >> 1], a: (b & 1) ? 0.95 : 0.55 });
+
+  /* ---- soft light and dust ---- */
+  const blobs = [];
+  const addB = function (u, v, w, rKpc, col, al, dust) {
+    const P = toAU(u, v, w);
+    blobs.push({ x: P.x, y: P.y, z: P.z, r: rKpc * KPC, col: col, a: al, dust: !!dust });
+  };
+  addB(0, 0, 0, 0.5, '255,240,215', 0.32);
+  for (let i = 0; i < 22; i++) {
+    const u = g1() * 1.2, v = g1() * 0.8, w = g1() * 0.5;
+    addB(u * cb - v * sb, u * sb + v * cb, w, 0.9 + rng() * 0.6, '255,222,170', 0.07);
+  }
+  for (let i = 0; i < 10; i++) { const s = -3.2 + 6.4 * i / 9; addB(s * cb, s * sb, 0, 1.0, '255,215,160', 0.055); }
+  ARMS.forEach(function (arm) {
+    const wf = arm.w / 0.4;
+    for (let th = arm.t0; th < arm.t1; th += 22 * DEG) {
+      const r = arm.r0 * Math.exp(arm.k * th);
+      const f = armFade(arm, th, r); if (r > 14.5 || f < 0.15) continue;
+      const rr = r + g1() * 0.15;
+      addB(rr * Math.cos(th), rr * Math.sin(th), g1() * 0.05, (0.9 + rng() * 0.5) * wf, arm.spur ? '210,215,255' : '190,205,255', 0.075 * arm.amp * f);
+    }
+    for (let th = arm.t0; th < arm.t1; th += 13 * DEG) {    /* dust hugs the inner edge of each arm */
+      const r = arm.r0 * Math.exp(arm.k * th);
+      const f = armFade(arm, th, r); if (r > 13 || f < 0.2) continue;
+      const rd = r * 0.92 - 0.1 + g1() * 0.08;
+      addB(rd * Math.cos(th), rd * Math.sin(th), g1() * 0.04, (0.55 + rng() * 0.3) * wf, '14,9,6', 0.40 * arm.amp * f, true);
+    }
+  });
+  for (let i = 0; i < 26; i++) {
+    const r = -3.2 * (Math.log(1 - rng()) + Math.log(1 - rng()));
+    if (r > 13 || r < 2) { i--; continue; }
+    const th = rng() * TAU;
+    addB(r * Math.cos(th), r * Math.sin(th), g1() * 0.15, 2.2 + rng() * 1.2, '232,222,205', 0.04);
+  }
+  for (let i = 0; i < 22; i++) {                            /* dust in the midplane */
+    const r = 2.5 + rng() * 7, th = rng() * TAU;
+    addB(r * Math.cos(th), r * Math.sin(th), 0, 1.0 + rng() * 0.6, '14,9,6', 0.20, true);
+  }
+  [[8, 0.018], [11, 0.014], [14, 0.010], [17, 0.007], [20, 0.005]].forEach(function (h) { addB(0, 0, 0, h[0], '205,205,235', h[1]); });
+  const order = blobs.map(function (_, i) { return i; });
+  const dist2 = new Float64Array(blobs.length);
+  /* where to write each arm's name when the galaxy is seen from outside */
+  const armLabels = [];
+  const armAt = function (i, thDeg) { const arm = ARMS[i], th = thDeg * DEG, r = arm.r0 * Math.exp(arm.k * th); return toAU(r * Math.cos(th), r * Math.sin(th), 0); };
+  armLabels.push({ arm: 0, pos: armAt(0, 120) }, { arm: 1, pos: armAt(1, 40) }, { arm: 2, pos: armAt(2, -60) },
+                 { arm: 3, pos: armAt(3, -240) }, { arm: 3, pos: armAt(3, 20), alt: 'Outer Arm' }, { arm: 4, pos: armAt(4, 32) },
+                 { arm: null, pos: toAU(3.0 * cb, 3.0 * sb, 0), alt: 'Galactic bar' });
+
+  /* the selectable object: lives at the centre, framed from above the plane on the Sun's side */
+  const view = norm({ x: ex.x * Math.cos(38 * DEG) + ez.x * Math.sin(38 * DEG),
+                      y: ex.y * Math.cos(38 * DEG) + ez.y * Math.sin(38 * DEG),
+                      z: ex.z * Math.cos(38 * DEG) + ez.z * Math.sin(38 * DEG) });
+  const radius = 50000 * LY_AU;
+  const o = addObject({
+    id: MILKY_WAY.id, name: MILKY_WAY.name, type: MILKY_WAY.type, kind: 'region', category: 'galaxies',
+    color: MILKY_WAY.color, radiusAU: radius, regionRadius: radius,
+    fixed: { x: c.x, y: c.y, z: c.z }, data: MILKY_WAY, prio: 90, minPx: 0, noRender: true,
+    centre: true, viewFill: 0.75,
+    view: { yaw: Math.atan2(view.y, view.x), pitch: Math.asin(clamp(view.z, -1, 1)) }
+  });
+  o.pos = o.fixed;
+  return { centre: c, ex: ex, ey: ey, ez: ez, radius: radius, KPC: KPC, n: n, px: px, py: py, pz: pz, arms: ARMS, armLabels: armLabels, toAU: toAU,
+           bucketStart: bucketStart, styles: styles, blobs: blobs, order: order, dist2: dist2, obj: o };
+})();
+
+
+/* --- The cosmic address: arms, the Local Group, the Virgo Supercluster,
+   Laniakea and the observable universe as selectable regions --- */
+const STRUCT = (function () {
+  if (!MW || typeof STRUCTURE === 'undefined') return null;
+  const MLY = 1e6 * LY_AU;
+  const regions = [];
+  const view38 = function (n) {                          /* a viewpoint 38° above a plane with normal n, on our side */
+    const toUs = norm({ x: -n.cx, y: -n.cy, z: -n.cz });
+    const nn = n.normal;
+    const dd = toUs.x * nn.x + toUs.y * nn.y + toUs.z * nn.z;
+    const u = norm({ x: toUs.x - dd * nn.x, y: toUs.y - dd * nn.y, z: toUs.z - dd * nn.z });
+    const v = norm({ x: u.x * Math.cos(38 * DEG) + nn.x * Math.sin(38 * DEG), y: u.y * Math.cos(38 * DEG) + nn.y * Math.sin(38 * DEG), z: u.z * Math.cos(38 * DEG) + nn.z * Math.sin(38 * DEG) });
+    return { yaw: Math.atan2(v.y, v.x), pitch: Math.asin(clamp(v.z, -1, 1)) };
+  };
+  const mkRegion = function (cfg, centre, radiusAU, normal, level) {
+    const o = addObject({
+      id: cfg.id, name: cfg.name, type: 'Large-scale structure', kind: 'region', category: 'structure',
+      color: cfg.color, radiusAU: radiusAU, regionRadius: radiusAU,
+      fixed: { x: centre.x, y: centre.y, z: centre.z }, data: cfg, prio: 85, minPx: 0, noRender: true,
+      centre: true, viewFill: 0.75, structLevel: level,
+      view: view38({ cx: centre.x, cy: centre.y, cz: centre.z, normal: normal })
+    });
+    o.pos = o.fixed;
+    regions.push({ obj: o, centre: o.pos, R: radiusAU, normal: normal, col: cfg.color });
+    return o;
+  };
+  /* arms are places within the galaxy; selecting one shows the galaxy with that arm named */
+  STRUCTURE.arms.forEach(function (cfg) {
+    const o = addObject({
+      id: cfg.id, name: cfg.name, type: cfg.arm == null ? 'Galactic centre' : 'Spiral arm', kind: 'region', category: 'structure',
+      color: cfg.color, radiusAU: MW.radius, regionRadius: MW.radius,
+      fixed: { x: MW.centre.x, y: MW.centre.y, z: MW.centre.z }, data: cfg, prio: 80, minPx: 0, noRender: true,
+      centre: true, viewFill: 0.75, structLevel: 0, armIndex: cfg.arm,
+      view: MW.obj.view
+    });
+    o.pos = o.fixed;
+  });
+  MW.obj.structLevel = 1;
+  const m31 = byId.m31, m87 = byId.m87;
+  /* Local Group: centred between the two big spirals */
+  const lgC = m31 ? { x: (MW.centre.x + m31.pos.x) / 2, y: (MW.centre.y + m31.pos.y) / 2, z: (MW.centre.z + m31.pos.z) / 2 } : MW.centre;
+  mkRegion(STRUCTURE.localgroup, lgC, STRUCTURE.localgroup.radiusMly * MLY, MW.ez, 2);
+  /* Virgo (Local) Supercluster: a disc in the supergalactic plane, centred on the Virgo Cluster */
+  const sgNorth = galacticToEcl(47.37 * DEG, 6.32 * DEG);
+  const vC = m87 ? m87.pos : norm(raDecToVec(12.5137, 12.391, 1));
+  const vCentre = m87 ? { x: vC.x, y: vC.y, z: vC.z } : { x: vC.x * 54 * MLY, y: vC.y * 54 * MLY, z: vC.z * 54 * MLY };
+  const vsc = mkRegion(STRUCTURE.virgosc, vCentre, STRUCTURE.virgosc.radiusMly * MLY, sgNorth, 3);
+  regions[regions.length - 1].disc = true;
+  /* Laniakea: a basin of attraction around the Great Attractor (Norma cluster direction) */
+  const ga = galacticToEcl(325.3 * DEG, -7.3 * DEG);
+  mkRegion(STRUCTURE.laniakea, { x: ga.x * 250 * MLY, y: ga.y * 250 * MLY, z: ga.z * 250 * MLY }, STRUCTURE.laniakea.radiusMly * MLY, sgNorth, 4);
+  /* the observable universe: centred on the observer */
+  mkRegion(STRUCTURE.observable, { x: 0, y: 0, z: 0 }, STRUCTURE.observable.radiusMly * MLY, MW.ez, 5);
+  return { regions: regions, chain: ['milkyway', 'localgroup', 'virgosc', 'laniakea', 'observable'], lgC: lgC, vCentre: vCentre };
+})();
+
+/* Which arm (or what else) a point in the galaxy belongs to */
+function galaxyPlace(pos) {
+  const K = MW.KPC, du = pos.x - MW.centre.x, dv = pos.y - MW.centre.y, dw = pos.z - MW.centre.z;
+  const u = (du * MW.ex.x + dv * MW.ex.y + dw * MW.ex.z) / K;
+  const v = (du * MW.ey.x + dv * MW.ey.y + dw * MW.ey.z) / K;
+  const w = (du * MW.ez.x + dv * MW.ez.y + dw * MW.ez.z) / K;
+  const r = Math.hypot(u, v), th = Math.atan2(v, u);
+  if (r < 3.3) return { id: 'bar', name: 'Galactic bar and bulge' };
+  if (Math.abs(w) > 2.5) return { id: null, name: 'Galactic halo' };
+  const ids = ['arm-scutum', 'arm-perseus', 'arm-sagittarius', 'arm-norma', 'arm-orion'];
+  const hits = [];
+  MW.arms.forEach(function (arm, i) {
+    for (let m = -2; m <= 2; m++) {
+      const t = th + m * TAU;
+      if (t < arm.t0 || t > arm.t1) continue;
+      const rr = arm.r0 * Math.exp(arm.k * t);
+      hits.push({ i: i, gap: Math.abs(r - rr) * Math.cos(Math.atan(arm.k)), inner: rr < r });
+    }
+  });
+  hits.sort(function (p, q) { return p.gap - q.gap; });
+  if (!hits.length) return { id: null, name: 'Outer disc' };
+  if (hits[0].gap < 0.7) return { id: ids[hits[0].i], name: byId[ids[hits[0].i]].name };
+  const inner = hits.find(function (h) { return h.inner; }), outer = hits.find(function (h) { return !h.inner; });
+  if (inner && outer) return { id: null, name: 'Between the ' + byId[ids[inner.i]].name + ' and the ' + byId[ids[outer.i]].name };
+  return { id: null, name: 'Near the ' + byId[ids[hits[0].i]].name };
+}
+
+/* The chain of structures an object belongs to, innermost first */
+function cosmicAddress(o) {
+  if (!MW || !STRUCT) return [];
+  const steps = [];
+  const push = function (id, name) { if (id && !byId[id]) return; steps.push({ id: id, name: name || byId[id].name }); };
+  const k = o.kind;
+  if (k === 'constellation') return steps;                 /* a pattern on the sky, not a place */
+  if (k === 'deepfield') { push('observable', 'Observable universe, along this line of sight'); return steps; }
+  const MLY = 1e6 * LY_AU;
+  const tail = function (pos) {
+    if (o.id !== 'localgroup' && o.structLevel == null || (o.structLevel != null && o.structLevel < 2)) {
+      const dLG = Math.hypot(pos.x - STRUCT.lgC.x, pos.y - STRUCT.lgC.y, pos.z - STRUCT.lgC.z);
+      if (dLG < 5 * MLY) push('localgroup');
+    }
+    if (o.structLevel == null || o.structLevel < 3) {
+      const dV = Math.hypot(pos.x - STRUCT.vCentre.x, pos.y - STRUCT.vCentre.y, pos.z - STRUCT.vCentre.z);
+      if (dV < 60 * MLY) push('virgosc');
+    }
+    if (o.structLevel == null || o.structLevel < 4) {
+      const L = byId.laniakea, dL = Math.hypot(pos.x - L.pos.x, pos.y - L.pos.y, pos.z - L.pos.z);
+      if (dL < 262 * MLY) push('laniakea'); else steps.push({ id: null, name: 'Beyond Laniakea' });
+    }
+    if (o.structLevel == null || o.structLevel < 5) push('observable');
+  };
+  if (o.structLevel != null) {                              /* a structure: everything above it */
+    if (o.structLevel === 0) push('milkyway');
+    tail(o.structLevel <= 1 ? MW.centre : o.pos);
+    return steps;
+  }
+  const solar = k === 'sun' || k === 'planet' || k === 'moon' || k === 'dwarf' || k === 'probe' || o.category === 'satellites' || o.category === 'belts';
+  if (solar) {
+    if (o.category === 'satellites' || (k === 'probe' && (o.mode === 'earthorbit' || o.mode === 'gp'))) push('earth');
+    else if (o.parent && byId[o.parent] && k !== 'exoplanet') push(o.parent);
+    if (k !== 'sun') push('sun', 'Solar System');
+    push('arm-orion'); push('milkyway'); tail(MW.centre); return steps;
+  }
+  if (k === 'ngc' || (o.dir && !o.pos)) { push('milkyway', 'Milky Way, distance not known'); tail(MW.centre); return steps; }
+  let pos = o.pos;
+  if (k === 'exoplanet' && o.parent && byId[o.parent]) { push(o.parent); pos = byId[o.parent].pos; }
+  if (!pos) return steps;
+  const isGalaxy = o.category === 'galaxies' || (o.sub === 'galaxy' || o.sub === 'spiral');
+  const dGC = Math.hypot(pos.x - MW.centre.x, pos.y - MW.centre.y, pos.z - MW.centre.z);
+  if (!isGalaxy && dGC < 70000 * LY_AU) {
+    const pl = galaxyPlace(pos);
+    steps.push(pl);
+    push('milkyway'); tail(MW.centre); return steps;
+  }
+  tail(pos);
+  return steps;
+}
+
+/* Outlines of the big structures, once the camera is outside them */
+function drawRegions() {
+  if (!STRUCT) return;
+  const maxWH = Math.max(W, H);
+  const camR = Math.hypot(camPos.x, camPos.y, camPos.z);
+  ctx.save();
+  ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let i = 0; i < STRUCT.regions.length; i++) {
+    const g = STRUCT.regions[i], o = g.obj;
+    const dx = g.centre.x - camPos.x, dy = g.centre.y - camPos.y, dz = g.centre.z - camPos.z;
+    const dist = Math.hypot(dx, dy, dz);
+    if (dist <= g.R * 1.03) continue;                       /* inside it */
+    const c = project(g.centre); if (!c) continue;
+    const sr = (g.R / Math.sqrt(dist * dist - g.R * g.R)) * focal;
+    if (sr < 7 || sr > 4 * maxWH) continue;
+    const sel = selectedId === o.id;
+    let al = clamp((sr - 7) / 25, 0, 1);
+    if (sr > 1.5 * maxWH) al *= clamp((4 * maxWH - sr) / (2.5 * maxWH), 0, 1);
+    if (al <= 0.01) continue;
+    const rgb = hexA(g.col, 1).replace('rgba(', '').replace(',1)', '');
+    ctx.setLineDash(sel ? [] : [6, 5]);
+    ctx.lineWidth = sel ? 1.6 : 1;
+    ctx.strokeStyle = 'rgba(' + rgb + ',' + (al * (sel ? 0.95 : 0.55)).toFixed(3) + ')';
+    if (g.disc) {
+      /* a flattened structure: draw its rim in 3D */
+      const n = g.normal, t = Math.abs(n.z) < 0.9 ? { x: 0, y: 0, z: 1 } : { x: 1, y: 0, z: 0 };
+      const u1 = norm(cross(n, t)), u2 = cross(n, u1);
+      ctx.beginPath(); let ok = true;
+      for (let k = 0; k <= 72; k++) {
+        const ang = k / 72 * TAU;
+        const q = project({ x: g.centre.x + g.R * (Math.cos(ang) * u1.x + Math.sin(ang) * u2.x),
+                            y: g.centre.y + g.R * (Math.cos(ang) * u1.y + Math.sin(ang) * u2.y),
+                            z: g.centre.z + g.R * (Math.cos(ang) * u1.z + Math.sin(ang) * u2.z) });
+        if (!q) { ok = false; break; }
+        if (k === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y);
+      }
+      if (ok) ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.arc(c.x, c.y, sr, 0, TAU); ctx.stroke();
+      if (o.id === 'observable') {                          /* the CMB: a faint glow just inside the edge */
+        const gr = ctx.createRadialGradient(c.x, c.y, sr * 0.9, c.x, c.y, sr);
+        gr.addColorStop(0, 'rgba(' + rgb + ',0)'); gr.addColorStop(1, 'rgba(' + rgb + ',' + (0.16 * al).toFixed(3) + ')');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(c.x, c.y, sr, 0, TAU); ctx.fill();
+      }
+    }
+    ctx.setLineDash([]);
+    const ly = clamp(c.y - sr - 9, 26, H - 26);
+    const txt = o.name + ' · ' + fmtDist(g.R * 2) + ' across';
+    const tw = ctx.measureText(txt).width;
+    const box = { x: c.x - tw / 2 - 4, y: ly - 8, w: tw + 8, h: 16 };
+    if (c.x - tw / 2 > 10 && c.x + tw / 2 < W - 10 && (!overlapsLabel(box) || sel)) {
+      backdropLabelBoxes.push(box);
+      ctx.fillStyle = 'rgba(' + rgb + ',' + (al * (sel ? 1 : 0.8)).toFixed(3) + ')';
+      ctx.fillText(txt, c.x, ly);
+    }
+  }
+  /* far out, the catalogue is a speck: say what it is */
+  if (camR > 4e9 * LY_AU) {
+    const c0 = project({ x: 0, y: 0, z: 0 });
+    if (c0 && bulkGal) {
+      ctx.textAlign = 'left';
+      ctx.font = '500 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = 'rgba(220,215,245,0.6)';
+      ctx.fillText('the ' + bulkGal.n.toLocaleString() + ' mapped galaxies', c0.x + 12, c0.y);
+    }
+  }
+  ctx.restore();
+}
+
 /* --- Background sky (directions only, effectively at infinity) --- */
 const skyStars = (function () {
   const rng = mulberry32(20260902);
@@ -810,6 +1167,7 @@ function drawBulkGalaxies() {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const nDraw = opts.allGalaxies ? G.n : G.defaultN;
+  const farFade = 1 - 0.85 * clamp((camR / LY_AU - 3e9) / 2e10, 0, 1);   /* a speck from the edge of the universe */
   for (let i = 0; i < nDraw && drawn < budget; i++) {
     let vz, sx, sy, range;
     if (far) {
@@ -831,7 +1189,7 @@ function drawBulkGalaxies() {
     const gt = galType(G.t[i]);
     if (rPx < 2.4 || grads >= GRAD) {
       const b = (m < 11 ? 0 : m < 13 ? 1 : m < 14.5 ? 2 : 3) + (gt[2] === 'spiral' ? 0 : 4);
-      if (b !== bucket) { bucket = b; ctx.fillStyle = hexA(gt[1], [0.55, 0.36, 0.20, 0.10][b & 3]); }
+      if (b !== bucket) { bucket = b; ctx.fillStyle = hexA(gt[1], [0.55, 0.36, 0.20, 0.10][b & 3] * farFade); }
       const s = rPx < 1.2 ? 1 : Math.min(3, rPx);
       ctx.fillRect(sx - s * 0.5, sy - s * 0.5, s, s);
     } else {
@@ -1149,7 +1507,7 @@ const cam = {
 let camPos = { x: 0, y: 0, z: 0 }, fwd = { x: 0, y: 0, z: 1 }, right = { x: 1, y: 0, z: 0 }, up = { x: 0, y: 1, z: 0 };
 let focal = 600, cx = 0, cy = 0;
 
-const MIN_DIST = 1e-5, MAX_DIST = 5e13;
+const MIN_DIST = 1e-5, MAX_DIST = 1e16;        /* out to beyond the edge of the observable universe */
 /* The sky can be magnified like a telescope: the field of view narrows from the
    50° walk-around view down to about an arcminute, enough to fill the screen with
    a deep field that is a fraction of a pixel wide at normal zoom. */
@@ -1278,7 +1636,7 @@ const opts = {
 
 let selectedId = null;
 let focusCategory = null;   /* which category panel is open */
-let labelBoxes = [];
+let labelBoxes = [], backdropLabelBoxes = [];
 
 /* the painted sky is only right from inside our own neighbourhood */
 function skyFade() {
@@ -1293,11 +1651,154 @@ function overlapsLabel(box) {
   return false;
 }
 
+
+/* The galaxy from outside. Fades in as the camera leaves the solar neighbourhood
+   (the real catalogue stars and the painted band represent the inside view), and
+   turns into a soft oriented ellipse — like every other galaxy in the map — when
+   it is small on screen. */
+function drawMilkyWay() {
+  if (!MW || !opts.milkyway) return;
+  const camR = Math.hypot(camPos.x, camPos.y, camPos.z) / LY_AU;
+  const fade = clamp((camR - 1500) / 4500, 0, 1);
+  if (fade <= 0.005) return;
+  const C = MW.centre;
+  const c = project(C);
+  const distC = Math.hypot(C.x - camPos.x, C.y - camPos.y, C.z - camPos.z);
+  const galPx = (MW.radius / distC) * focal;               /* disc radius on screen, roughly */
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  if (c && galPx < 2) {                                    /* a dot, like the catalogue galaxies at this range */
+    ctx.fillStyle = 'rgba(230,225,245,' + (0.8 * fade).toFixed(3) + ')';
+    ctx.fillRect(c.x - 1, c.y - 1, 2, 2);
+    ctx.restore(); return;
+  }
+  if (c && galPx < 140) {                                  /* far: one oriented soft ellipse */
+    const R = MW.radius;
+    const pu = project({ x: C.x + MW.ex.x * R, y: C.y + MW.ex.y * R, z: C.z + MW.ex.z * R });
+    const pv = project({ x: C.x + MW.ey.x * R, y: C.y + MW.ey.y * R, z: C.z + MW.ey.z * R });
+    if (pu && pv) {
+      const sa = clamp((140 - galPx) / 60, 0, 1) * fade;
+      ctx.save();
+      ctx.transform(pu.x - c.x, pu.y - c.y, pv.x - c.x, pv.y - c.y, c.x, c.y);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      g.addColorStop(0, 'rgba(255,252,245,' + (0.55 * sa).toFixed(3) + ')');
+      g.addColorStop(0.14, 'rgba(240,228,205,' + (0.34 * sa).toFixed(3) + ')');
+      g.addColorStop(0.5, 'rgba(195,205,242,' + (0.14 * sa).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(180,190,240,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, 1, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
+  const detail = clamp((galPx - 40) / 60, 0, 1) * fade;
+  if (detail > 0.01) {
+    const fx = fwd.x, fy = fwd.y, fz = fwd.z, rx = right.x, ry = right.y, rz = right.z, ux = up.x, uy = up.y, uz = up.z;
+    const px0 = camPos.x, py0 = camPos.y, pz0 = camPos.z;
+    /* soft light and dust, far to near so dust in front darkens what is behind it */
+    const B = MW.blobs, ord = MW.order, d2 = MW.dist2;
+    for (let i = 0; i < B.length; i++) { const b = B[i]; const dx = b.x - px0, dy = b.y - py0, dz = b.z - pz0; d2[i] = dx * dx + dy * dy + dz * dz; }
+    ord.sort(function (i, j) { return d2[j] - d2[i]; });
+    const maxWH = Math.max(W, H);
+    let grads = 0, mode = 'lighter';
+    for (let k = 0; k < ord.length && grads < 300; k++) {
+      const b = B[ord[k]];
+      const dx = b.x - px0, dy = b.y - py0, dz = b.z - pz0;
+      const vz = dx * fx + dy * fy + dz * fz;
+      if (vz <= 0) continue;
+      const sr = (b.r / vz) * focal;
+      if (sr < 0.7 || sr > 3 * maxWH) continue;
+      const sx = cx + (dx * rx + dy * ry + dz * rz) * focal / vz;
+      const sy = cy - (dx * ux + dy * uy + dz * uz) * focal / vz;
+      if (sx + sr < 0 || sx - sr > W || sy + sr < 0 || sy - sr > H) continue;
+      const near = clamp(Math.sqrt(d2[ord[k]]) / b.r - 0.6, 0, 1);     /* inside a cloud you do not see it */
+      const al = b.a * detail * near;
+      if (al < 0.002) continue;
+      const want = b.dust ? 'source-over' : 'lighter';
+      if (want !== mode) { mode = want; ctx.globalCompositeOperation = want; }
+      if (sr < 2.5) { ctx.fillStyle = 'rgba(' + b.col + ',' + (al * 0.9).toFixed(3) + ')'; ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2); continue; }
+      grads++;
+      const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+      g.addColorStop(0, 'rgba(' + b.col + ',' + al.toFixed(3) + ')');
+      g.addColorStop(0.4, 'rgba(' + b.col + ',' + (al * 0.5).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + b.col + ',0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2);
+    }
+    /* stars */
+    if (mode !== 'lighter') ctx.globalCompositeOperation = 'lighter';
+    const pa = detail * clamp(galPx / 350, 0.15, 1);
+    const size = galPx > 2500 ? 2 : galPx > 900 ? 1.5 : 1;
+    const near2 = 1500 * LY_AU * 1500 * LY_AU;
+    const N = MW.n, PX = MW.px, PY = MW.py, PZ = MW.pz, BS = MW.bucketStart;
+    for (let b = 0; b < 8; b++) {
+      const st = MW.styles[b];
+      ctx.fillStyle = 'rgba(' + st.col + ',' + (st.a * pa).toFixed(3) + ')';
+      for (let i = BS[b]; i < BS[b + 1]; i++) {
+        const dx = PX[i] - px0, dy = PY[i] - py0, dz = PZ[i] - pz0;
+        const vz = dx * fx + dy * fy + dz * fz;
+        if (vz <= 0) continue;
+        if (dx * dx + dy * dy + dz * dz < near2) continue;
+        const sx = cx + (dx * rx + dy * ry + dz * rz) * focal / vz;
+        if (sx < 0 || sx > W) continue;
+        const sy = cy - (dx * ux + dy * uy + dz * uz) * focal / vz;
+        if (sy < 0 || sy > H) continue;
+        ctx.fillRect(sx, sy, size, size);
+      }
+    }
+  }
+  ctx.restore();
+  /* the arms, once they are big enough to read */
+  if (galPx > 150 && galPx < 6000 && detail > 0.4 && cam.fov > FOV_DEFAULT * 0.98) {
+    ctx.save();
+    ctx.font = '600 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '1.5px';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const selArm = selectedId && byId[selectedId] && byId[selectedId].armIndex;
+    const selBar = selectedId === 'bar';
+    for (let i = 0; i < MW.armLabels.length; i++) {
+      const L = MW.armLabels[i];
+      const q = project(L.pos); if (!q || q.x < 30 || q.x > W - 30 || q.y < 30 || q.y > H - 30) continue;
+      const name = (L.alt || STRUCTURE.arms.find(function (s) { return s.arm === L.arm; }).name).toUpperCase();
+      const hot = L.arm == null ? selBar : (selArm != null && selArm === L.arm);
+      const tw = ctx.measureText(name).width;
+      const box = { x: q.x - tw / 2 - 3, y: q.y - 7, w: tw + 6, h: 14 };
+      if (overlapsLabel(box) && !hot) continue;
+      backdropLabelBoxes.push(box);
+      ctx.fillStyle = hot ? 'rgba(255,240,200,0.98)' : 'rgba(190,205,255,' + (0.6 * fade).toFixed(3) + ')';
+      ctx.fillText(name, q.x, q.y);
+    }
+    ctx.restore();
+  }
+  /* a name, once the whole thing fits on screen */
+  if (c && galPx > 2 && galPx < 2600) {
+    const small = galPx < 24;
+    const ly = small ? c.y : c.y - galPx * 0.62 - 6, lx = small ? c.x + galPx + 6 : c.x;
+    if (lx > 40 && lx < W - 40 && ly > 30 && ly < H - 30) {
+      ctx.save();
+      ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      const tw = ctx.measureText('Milky Way').width;
+      const box = small ? { x: lx, y: ly - 8, w: tw + 8, h: 16 } : { x: lx - tw / 2 - 4, y: ly - 8, w: tw + 8, h: 16 };
+      if (!overlapsLabel(box)) {
+        backdropLabelBoxes.push(box);
+        ctx.textAlign = small ? 'left' : 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(220,215,245,' + (0.85 * fade).toFixed(3) + ')';
+        ctx.fillText('Milky Way', lx, ly);
+      }
+      ctx.restore();
+    }
+  }
+}
+
 function drawSky() {
   const fade = skyFade();
   /* The bulk catalogue is real geometry, not painted backdrop, so it must not fade
      out with the procedural sky when the camera leaves the solar neighbourhood. */
-  if (bulkStars && opts.stars) drawBulkStars(1);
+  if (bulkStars && opts.stars) {
+    /* from outside the galaxy the catalogue stars are a bright knot at the Sun; let them recede */
+    const camR = Math.hypot(camPos.x, camPos.y, camPos.z) / LY_AU;
+    drawBulkStars(1 - 0.85 * clamp((camR - 15000) / 40000, 0, 1));
+  }
   if (fade <= 0.01) return;
 
   if (opts.milkyway) {
@@ -1923,9 +2424,12 @@ function render(dt) {
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
+  backdropLabelBoxes = []; labelBoxes = [];
   drawSky();
   drawBulkGalaxies();
   drawBulkDso();
+  drawMilkyWay();
+  drawRegions();
   drawBelts();
   drawSmallBodies(project({ x: 0, y: 0, z: 0 }));
 
@@ -2033,6 +2537,7 @@ function render(dt) {
   /* collect drawables. Clear every stale .screen first: a value left over from an
      earlier frame would put the selection reticle and pick() at a phantom position. */
   for (let i = 0; i < objects.length; i++) objects[i].screen = null;
+  const camFromSunLy = Math.hypot(camPos.x, camPos.y, camPos.z) / LY_AU;
   const draw = [];
   for (let i = 0; i < objects.length; i++) {
     const o = objects[i];
@@ -2047,14 +2552,16 @@ function render(dt) {
   }
   draw.sort((a, b) => b.screen.z - a.screen.z);
 
-  labelBoxes = [];
+  labelBoxes = backdropLabelBoxes.slice();
   const labels = [];
 
   for (let i = 0; i < draw.length; i++) {
     const o = draw[i];
     const p = o.screen;
 
+    const farOut = camFromSunLy > 20000 && selectedId !== o.id && cam.follow !== o.id;
     if (o.kind === 'blackhole') {
+      if (farOut && o.id !== 'sgrA') continue;
       drawBlackHole(o, p);
       labels.push(o);
       continue;
@@ -2067,6 +2574,7 @@ function render(dt) {
     }
 
     if (o.kind === 'neutron') {
+      if (farOut) continue;
       drawRemnant(o, p);
       labels.push(o);
       continue;
@@ -2082,9 +2590,10 @@ function render(dt) {
       const mag = (o.kind === 'sun' ? 4.83 : o.absMag) + 5 * Math.log10(Math.max(dpc, 1e-12)) - 5;
       /* how much brighter than the naked-eye limit, compressed hard so a
          nearby star glows without washing out everything beside it */
+      if (o.kind === 'star' && mag > 11 && farOut) continue;      /* too faint to see from here */
       const excess = Math.max(0, 6.5 - mag);
       const bright = clamp(excess / 9, 0.05, 1);
-      const core = Math.max(opts.realSize ? 0.7 : o.minPx, rPx);
+      const core = Math.max(opts.realSize ? 0.7 : (o.kind === 'sun' && camFromSunLy > 60000 ? 1.6 : o.minPx), rPx);
       const glowR = Math.max(core * 2.2, clamp(3.5 + 5.2 * Math.sqrt(excess), 4, 40));
 
       if (rPx > 2.0) {
@@ -2172,9 +2681,13 @@ function render(dt) {
 function labelWanted(o) {
   if (selectedId === o.id || cam.follow === o.id) return true;
   const p = o.screen; if (!p) return false;
+  /* from outside the galaxy everything near the Sun shares one pixel; the galaxy gets the name */
+  if (o.kind !== 'deepsky' && o.kind !== 'ngc' && o.kind !== 'constellation' && o.kind !== 'deepfield' &&
+      Math.hypot(camPos.x, camPos.y, camPos.z) > 4e5 * LY_AU) return false;
   const rPx = (o.radiusAU / p.z) * focal;
   switch (o.kind) {
-    case 'sun': case 'planet': return true;
+    case 'sun': return Math.hypot(camPos.x, camPos.y, camPos.z) < 4e5 * LY_AU;   /* from outside, the galaxy gets the name */
+    case 'planet': return true;
     case 'dwarf': return o.category === 'dwarfs' || rPx > 2.5;
     case 'moon': return rPx > 1.6;
     case 'exoplanet': return rPx > 1.5;
@@ -2184,7 +2697,9 @@ function labelWanted(o) {
       if (o.parent) return selectedId === o.parent || cam.follow === o.parent;
       if (o.mode === 'l2' || o.mode === 'l2halo' || o.mode === 'trailing') return cam.dist < 0.6 || focusCategory === 'telescopes';
       return cam.dist < 300;
-    case 'neutron': case 'blackhole': return focusCategory === o.category || cam.dist < 3 || o.id === 'sgrA';
+    case 'neutron': case 'blackhole':
+      if (Math.hypot(camPos.x, camPos.y, camPos.z) > 4e5 * LY_AU) return false;   /* from outside, the galaxy gets the name */
+      return focusCategory === o.category || cam.dist < 3 || o.id === 'sgrA';
     default: return true;
   }
 }
@@ -2644,6 +3159,7 @@ function frameDistance(radiusAU, fill) {
 }
 
 function objectViewDistance(o) {
+  if (o.viewFill)             return frameDistance(o.radiusAU, o.viewFill);
   if (o.kind === 'region')    return o.regionRadius * 2.6;
   if (o.kind === 'probe') {
     if (o.mode === 'gp') return 0.00004;
@@ -2692,11 +3208,15 @@ function flyTo(id) {
   cam.fovGoal = FOV_DEFAULT;       /* flying somewhere always leaves the telescope view */
   if (o.kind === 'region') {
     cam.follow = null;
+    /* belts are centred on the Sun; a galaxy has its own centre and its own best angle */
+    const dest = o.centre ? o : { pos: { x: 0, y: 0, z: 0 }, id: 'sun' };
+    let yaw = cam.yawGoal, pitch = 0.62;
+    if (o.view) { let dy = o.view.yaw - cam.yawGoal; dy -= TAU * Math.round(dy / TAU); yaw = cam.yawGoal + dy; pitch = o.view.pitch; }
     cam.flight = {
-      t: 0, dur: 2.0, obj: { pos: { x: 0, y: 0, z: 0 }, id: 'sun' },
+      t: 0, dur: o.centre ? 3.4 : 2.0, obj: dest,
       fx: cam.tx, fy: cam.ty, fz: cam.tz,
       fd: cam.dist, td: objectViewDistance(o),
-      fyaw: cam.yawGoal, fpitch: cam.pitchGoal, yaw: cam.yawGoal, pitch: 0.62,
+      fyaw: cam.yawGoal, fpitch: cam.pitchGoal, yaw: yaw, pitch: pitch,
       noFollow: true          /* a region is a volume, not a body to lock onto */
     };
     pushHistory(id);
@@ -2750,6 +3270,7 @@ const ICONS = {
   nebula: '<path d="M6.5 17a4 4 0 0 1-1-7.9A5 5 0 0 1 15 7.1 4.5 4.5 0 0 1 17.5 16z"/><circle cx="10" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="13.5" r="1" fill="currentColor" stroke="none"/>',
   galaxy: '<path d="M12 4c4.4 0 8 3.6 8 8"/><path d="M12 20c-4.4 0-8-3.6-8-8"/><path d="M12 8.5a3.5 3.5 0 0 1 3.5 3.5"/><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/>',
   telescope: '<path d="M3.5 14.5 14 8.5l3 5.2-10.5 6z"/><path d="M14 8.5 16.4 4l3.6 2.1-2.9 4.6"/><path d="M9 17.5 7.5 21"/><path d="M13 15.5 15 21"/>',
+  address: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.6"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
   deepfield: '<rect x="4" y="4" width="16" height="16" rx="1" stroke-dasharray="4 3"/><circle cx="9.5" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="13.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="8.5" r="0.8" fill="currentColor" stroke="none"/>',
   constellation: '<circle cx="6" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="5.5" r="1" fill="currentColor" stroke="none"/><circle cx="17" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="18" r="1" fill="currentColor" stroke="none"/>',
   satellite: '<rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M3 8l4 4-2 2-4-4zM21 16l-4-4 2-2 4 4zM9.5 12H7M17 12h-2.5"/>',
@@ -2784,7 +3305,11 @@ CATEGORIES.forEach(function (c) {
 
 function categoryMembers(catId) {
   if (catId === 'featured') return FEATURED_IDS.map(function (id) { return byId[id]; }).filter(Boolean);
-  return objects.filter(function (o) { return o.category === catId; });
+  const list = objects.filter(function (o) { return o.category === catId; });
+  if (catId === 'galaxies' && byId.milkyway) return [byId.milkyway].concat(list.filter(function (o) { return o.id !== 'milkyway'; }));
+  if (catId === 'structure') return ['arm-orion', 'milkyway', 'localgroup', 'virgosc', 'laniakea', 'observable', 'bar', 'arm-sagittarius', 'arm-perseus', 'arm-scutum', 'arm-norma']
+    .map(function (id) { return byId[id]; }).filter(Boolean);
+  return list;
 }
 
 function openCategory(catId) {
@@ -2851,7 +3376,9 @@ function relatedGroups(o) {
     push('Same patch of sky', deepFieldList.filter(function (d) {
       return d !== o && angSepArcmin(d.dir, o.dir) < Math.max(20, 0.6 * (d.data.arcmin + o.data.arcmin));
     }), yearBadge);
-    const links = (o.data.links || (o.data.link ? [o.data.link] : [])).map(function (id) { return byId[id]; }).filter(Boolean);
+  }
+  if (o.data && (o.data.links || o.data.link)) {
+    const links = (o.data.links || [o.data.link]).map(function (id) { return byId[id]; }).filter(Boolean);
     push('In the map', links);
   }
   if (o.kind === 'sun') {
@@ -2896,6 +3423,15 @@ function renderRelated(o) {
             '<button class="btn tiny rel-toggle' + (opts.satellites ? ' on' : '') + '" id="btnSatLayer">' +
             (opts.satellites ? 'Hide the satellite layer' : 'Show all ' + S.n.toLocaleString() + ' satellites') + '</button>' +
             '<div class="rel-chips">' + feat.map(chipHtml).join('') + '</div></div>';
+  }
+  const addr = cosmicAddress(o);
+  if (addr.length) {
+    html += '<div class="rel-group"><div class="rel-title">Cosmic address</div><div class="address"><span class="addr-here">' + esc(o.name) + '</span>' +
+      addr.map(function (s) {
+        return '<span class="addr-sep">›</span>' + (s.id && byId[s.id]
+          ? '<button class="chip addr" data-id="' + esc(s.id) + '" style="--c:' + esc(byId[s.id].color || '#aaa') + '">' + esc(s.name) + '</button>'
+          : '<span class="addr-plain">' + esc(s.name) + '</span>');
+      }).join('') + '</div></div>';
   }
   box.innerHTML = html;
   box.classList.toggle('hidden', !html);
@@ -3257,9 +3793,27 @@ let searchSel = -1, searchList = [];
 function runSearch() {
   const q = searchInput.value.trim().toLowerCase();
   if (!q) { searchResults.classList.remove('show'); searchList = []; searchSel = -1; return; }
-  searchList = objects.filter(function (o) {
-    return o.name.toLowerCase().indexOf(q) >= 0 || (o.type || '').toLowerCase().indexOf(q) >= 0;
-  }).slice(0, 12);
+  /* exact names and ids first, then names that start with the query, then anything
+     containing it — so "leo" is Leo before Galileo and "m31" is Andromeda */
+  const qk = q.replace(/\s+/g, '');
+  const scored = [];
+  for (let i = 0; i < objects.length; i++) {
+    const o = objects[i], nm = o.name.toLowerCase();
+    let s = -1;
+    if (nm === q || o.id.toLowerCase() === qk) s = 0;
+    else if (nm.indexOf(q) === 0) s = 1;
+    else if (nm.indexOf(q) >= 0) s = 2;
+    else if ((o.type || '').toLowerCase().indexOf(q) >= 0) s = 3;
+    const al = o.data && o.data.aliases;
+    if (al) for (let k = 0; k < al.length; k++) {
+      const v = al[k].toLowerCase();
+      if (v === q || v.replace(/\s+/g, '') === qk) { s = 0; break; }
+      if (v.indexOf(q) === 0 && (s < 0 || s > 1)) s = 1;
+    }
+    if (s >= 0) scored.push({ o: o, s: s, p: o.prio || 0 });
+  }
+  scored.sort(function (x, y) { return x.s - y.s || y.p - x.p; });
+  searchList = scored.slice(0, 12).map(function (x) { return x.o; });
   if (searchList.length < 12) searchBulk(q, searchList, 12);
   searchResults.innerHTML = '';
   if (!searchList.length) {
@@ -3516,7 +4070,7 @@ updateHistoryButtons();
 requestAnimationFrame(frame);
 
 /* expose a little of the internals for tinkering from the console */
-window.OU = { objects: objects, byId: byId, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+window.OU = { objects: objects, byId: byId, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
               step: function (dt) { dt = dt || 0.016; updatePositions(simJd); updateCamera(dt); render(dt); },

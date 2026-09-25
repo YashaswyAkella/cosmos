@@ -419,7 +419,7 @@ const STARS = [
 
 /* ---------------- Exotic objects ---------------- */
 const EXOTIC = [
-  { id:'sgrA', name:'Sagittarius A*', type:'Supermassive black hole', kind:'blackhole',
+  { id:'sgrA', name:'Sagittarius A*', type:'Supermassive black hole', kind:'blackhole', aliases:['Sgr A*', 'Sgr A', 'galactic centre', 'galactic center'],
     ra:17.7611, dec:-29.0078, d: 26673, color:'#ffb45e',
     massSuns: 4.297e6, shadowKm: 2.4e7,
     desc:'The black hole at the centre of the Milky Way, 4.3 million times the mass of the Sun. Everything in the galaxy — including us — orbits it. The Event Horizon Telescope photographed its shadow in 2022.',
@@ -460,12 +460,13 @@ const CATEGORIES = [
   { id:'clusters',    name:'Star Clusters', sub:'Stars born together',          icon:'cluster' },
   { id:'nebulae',     name:'Nebulae',       sub:'Cosmic clouds of gas and dust', icon:'nebula' },
   { id:'galaxies',    name:'Galaxies',      sub:'Billions of star systems',     icon:'galaxy' },
+  { id:'structure',   name:'Our Address',   sub:'From the Orion Spur to Laniakea', icon:'address' },
   { id:'deepfields',  name:'Telescope Views', sub:'What Hubble, Webb and others stared at', icon:'deepfield' },
   { id:'constellations', name:'Constellations', sub:'The 88 figures of the sky', icon:'constellation' },
   { id:'blackholes',  name:'Black Holes',   sub:'Where gravity wins',           icon:'blackhole' }
 ];
 
-const FEATURED_IDS = ['sun','earth','saturn','europa','pluto','voyager1','alphacenA','sgrA'];
+const FEATURED_IDS = ['sun','earth','saturn','europa','pluto','voyager1','alphacenA','sgrA','milkyway','m31'];
 
 /* ---------------- On this day ---------------- */
 const EVENTS = {
@@ -581,7 +582,7 @@ const EXOPLANETS = [
         globular | open                                        */
 const DEEP_SKY = [
   /* --- Galaxies --- */
-  { id:'m31', name:'Andromeda Galaxy', sub:'spiral', cat:'galaxies', ra:0.7123, dec:41.269, d:2537000, size:152000, color:'#cfd8f2', tilt:0.6, flat:0.34,
+  { id:'m31', name:'Andromeda Galaxy', aliases:['M31', 'NGC 224', 'Andromeda'], sub:'spiral', cat:'galaxies', ra:0.7123, dec:41.269, d:2537000, size:152000, color:'#cfd8f2', tilt:0.6, flat:0.34,
     desc:'The nearest large galaxy and the most distant thing most people can see with the naked eye. It holds about a trillion stars and is heading toward us at 110 km/s — a merger due in roughly 4.5 billion years.',
     stats:{ 'Type':'Barred spiral (SA(s)b)', 'Distance':'2.54 million ly', 'Diameter':'≈152,000 ly', 'Stars':'≈1 trillion', 'Apparent size':'3° — six full Moons' } },
   { id:'m33', name:'Triangulum Galaxy', sub:'spiral', cat:'galaxies', ra:1.5641, dec:30.660, d:2730000, size:60000, color:'#c8d4ee', tilt:-0.4, flat:0.6,
@@ -1348,3 +1349,57 @@ const VEHICLES = [
   { name:'Car on a motorway',                      kmps:0.0278,     note:'100 km/h' },
   { name:'Walking',                                kmps:0.00139,    note:'5 km/h' }
 ];
+
+/* ---------------- Our galaxy, as a whole ----------------
+   Seen from inside as the band across the night sky; from outside as a
+   barred spiral. The outside view is a model built from survey measurements
+   — nobody has photographed the Milky Way from outside. */
+const MILKY_WAY = {
+  id:'milkyway', name:'Milky Way', type:'Barred spiral galaxy', color:'#d9d2f0',
+  aliases:['our galaxy', 'home galaxy', 'the galaxy'],
+  desc:'Our home galaxy: a barred spiral about 100,000 light years across holding a few hundred billion stars. The Sun sits in the Local Arm, 26,700 light years from the centre, and takes about 230 million years to go round once. From inside it is the band of light across the night sky; zoom out and the whole disc comes into view. That outside view is an impression built from what surveys have measured — no photograph of the Milky Way from outside can exist.',
+  stats:{ 'Type':'Barred spiral, SBbc', 'Diameter':'≈100,000 light years', 'Stars':'100–400 billion', 'Mass':'≈1.5 trillion Suns',
+          'Sun\'s distance from centre':'26,700 light years', 'Sun\'s orbit':'≈230 million years', 'Thickness of the disc':'≈1,000 light years',
+          'Age':'≈13.6 billion years', 'Central black hole':'Sagittarius A*, 4.3 million Suns', 'Companions':'LMC, SMC and ~60 dwarf galaxies',
+          'Future':'Merges with Andromeda in ≈4.5 billion years' },
+  links:['sgrA', 'sun', 'lmc', 'smc', 'omegacen', 'm31']
+};
+
+/* ---------------- Cosmic address ----------------
+   The nested structures we belong to. Arms follow Reid et al. 2019; the
+   Local Group, Virgo (Local) Supercluster and Laniakea (Tully et al. 2014)
+   are drawn as simple outlines at their accepted sizes. */
+const STRUCTURE = {
+  arms: [
+    { id:'arm-scutum', name:'Scutum–Centaurus Arm', arm:0, color:'#9fb4ff',
+      desc:'One of the two major arms, rising from the near end of the central bar. Its inner stretch is packed with star-forming regions, and its far, outer continuation wraps around beyond the Perseus Arm.',
+      stats:{ 'Kind':'Major arm', 'Pitch angle':'≈13°', 'Nearest point to us':'≈12,000 light years, toward Scutum' } },
+    { id:'arm-sagittarius', name:'Sagittarius–Carina Arm', arm:2, color:'#9fb4ff',
+      desc:'The arm just inside ours. Looking toward the galactic centre on a summer night, the bright Milky Way in Sagittarius and the Carina Nebula in the south are this arm. The Lagoon, Trifid, Eagle and Omega nebulae all live in it.',
+      stats:{ 'Kind':'Minor arm', 'Pitch angle':'≈12°', 'Distance from us':'≈5,000 light years inward' } },
+    { id:'arm-orion', name:'Orion Spur', arm:4, color:'#c3caff', aliases:['Orion Arm', 'Local Arm', 'Orion-Cygnus Arm'],
+      desc:'Where we live. A short spur about 10,000 light years long between the Sagittarius and Perseus arms, containing the Sun, Orion\'s nebulae and most of the bright stars of our night sky. Once thought to be a minor bridge, radio surveys now show it to be a substantial arm segment.',
+      stats:{ 'Kind':'Spur (arm segment)', 'Length':'≈10,000 light years', 'Pitch angle':'≈11°', 'The Sun':'Near its inner edge, 26,700 light years from the galactic centre' } },
+    { id:'arm-perseus', name:'Perseus Arm', arm:1, color:'#9fb4ff',
+      desc:'The major arm just outside ours, about 6,000 light years further from the centre. The Double Cluster in Perseus, the Heart and Soul nebulae and Cassiopeia\'s rich star fields are in it.',
+      stats:{ 'Kind':'Major arm', 'Pitch angle':'≈10°', 'Distance from us':'≈6,000 light years outward' } },
+    { id:'arm-norma', name:'Norma–Outer Arm', arm:3, color:'#9fb4ff',
+      desc:'Rises from the far end of the bar as the Norma Arm, winds around the far side of the galaxy, and reaches our side again as the faint Outer Arm beyond Perseus, some 15,000 light years further out than the Sun.',
+      stats:{ 'Kind':'Minor arm', 'Pitch angle':'≈12°', 'Outer crossing':'≈41,000 light years from the centre' } },
+    { id:'bar', name:'Galactic bar and bulge', arm:null, color:'#ffd9a0',
+      desc:'The old, yellow heart of the galaxy: a bar of stars about 27,000 light years long, tilted about 30° to our line of sight, surrounded by a boxy bulge. Sagittarius A* sits at its centre.',
+      stats:{ 'Bar length':'≈27,000 light years', 'Angle to our line of sight':'≈30°', 'Stars':'≈20 billion' } }
+  ],
+  localgroup: { id:'localgroup', name:'Local Group', color:'#96c8ff', radiusMly:5,
+    desc:'The small cluster of galaxies bound to us: the Milky Way and Andromeda, the Triangulum Galaxy, and about eighty dwarfs, all within roughly ten million light years. Its centre of mass lies between the two big spirals, which are falling toward each other and will merge in about four and a half billion years.',
+    stats:{ 'Diameter':'≈10 million light years', 'Members':'≈80 galaxies, 3 large', 'Mass':'≈2–3 trillion Suns', 'Centre':'Between the Milky Way and Andromeda' } },
+  virgosc: { id:'virgosc', name:'Virgo Supercluster', color:'#c8aaff', radiusMly:55, aliases:['Local Supercluster'],
+    desc:'The flattened cloud of about a hundred galaxy groups, ours included, arranged around the Virgo Cluster 54 million light years away. Also called the Local Supercluster. We sit near its edge, and its pull slows our drift away from Virgo by about 200 km/s.',
+    stats:{ 'Diameter':'≈110 million light years', 'Shape':'Flattened disc, the supergalactic plane', 'Centre':'Virgo Cluster, 54 million light years away', 'Groups':'≈100' } },
+  laniakea: { id:'laniakea', name:'Laniakea Supercluster', color:'#ffbe96', radiusMly:260, aliases:['Laniakea', 'Great Attractor'],
+    desc:'Our home supercluster as defined in 2014 by the flow of galaxies: everything streaming toward the Great Attractor, a dense region 250 million light years away in Centaurus and Norma. It holds about 100,000 galaxies and the Virgo Supercluster is one lobe of it. The name is Hawaiian for "immense heaven".',
+    stats:{ 'Diameter':'≈520 million light years', 'Galaxies':'≈100,000', 'Mass':'≈10¹⁷ Suns', 'Centre':'The Great Attractor, ≈250 million light years away', 'Defined':'Tully et al., 2014' } },
+  observable: { id:'observable', name:'Observable universe', color:'#ffe6c8', radiusMly:46500, aliases:['universe', 'cosmic microwave background', 'CMB', 'edge of the universe'],
+    desc:'Everything whose light has had time to reach us since the Big Bang. Its edge is the cosmic microwave background, light released 13.8 billion years ago; the matter that sent it has since been carried to about 46 billion light years away by the expansion of space. Beyond that boundary there is more universe, but no signal from it can have arrived yet.',
+    stats:{ 'Radius':'≈46.5 billion light years', 'Age':'13.8 billion years', 'Galaxies':'≈200 billion to 2 trillion', 'Edge':'Cosmic microwave background, redshift ≈1,100', 'Beyond it':'Unobservable, not empty' } }
+};

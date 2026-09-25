@@ -429,3 +429,10 @@ button, input { font-family: inherit; }
 .find-z { font-size: 11px; color: #ffd27a; font-variant-numeric: tabular-nums; }
 .find-meta { font-size: 11.5px; color: #d5d5dd; line-height: 1.45; margin-top: 3px; }
 .find-note { font-size: 11px; color: var(--muted); line-height: 1.45; margin-top: 3px; }
+
+/* ---------- cosmic address ---------- */
+.address { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; font-size: 12px; line-height: 1.4; }
+.addr-here { font-weight: 600; color: var(--foreground); margin-right: 2px; }
+.addr-sep { color: var(--dim); margin: 0 3px; }
+.addr-plain { color: var(--muted); }
+.chip.addr { padding: 2px 8px; }
