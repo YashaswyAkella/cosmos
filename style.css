@@ -226,6 +226,7 @@ button, input { font-family: inherit; }
   backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   border: 1px solid var(--card-border); border-radius: 12px;
   padding: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  max-height: calc(100% - 24px); overflow-y: auto;
 }
 .popover.wide { width: 330px; max-height: 60vh; overflow-y: auto; }
 .popover-title {
@@ -436,3 +437,26 @@ button, input { font-family: inherit; }
 .addr-sep { color: var(--dim); margin: 0 3px; }
 .addr-plain { color: var(--muted); }
 .chip.addr { padding: 2px 8px; }
+
+/* ---------- trip planner: the best shot ---------- */
+.route-best { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(124,140,255,0.10); border: 1px solid rgba(124,140,255,0.28); }
+.route-best-title { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #aab4ff; font-weight: 700; margin-bottom: 6px; }
+.route-best p { font-size: 12.5px; line-height: 1.5; color: #dcdce6; margin: 0 0 8px; }
+.route-best p.dim { color: var(--muted); font-size: 11.5px; }
+.route-best strong { color: #c3caff; }
+.route-window { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12.5px; }
+.route-window span { color: var(--muted); width: 118px; }
+.route-window strong { color: #fafafa; font-weight: 600; }
+.route-window em { color: var(--dim); font-style: normal; margin-left: auto; font-size: 11.5px; }
+
+/* ---------- settings: segmented control ---------- */
+.seg-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 4px; font-size: 12.5px; }
+.seg { display: inline-flex; background: var(--input-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 2px; }
+.seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 11.5px; padding: 3px 9px; border-radius: 6px; cursor: pointer; }
+.seg button.on { background: var(--accent-soft); color: #c3caff; }
+/* ---------- size comparison ---------- */
+#compareCanvas { width: 100%; height: auto; border-radius: 10px; margin: 10px 0 8px; display: block; background: #07070b; }
+.compare-quick { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+
+/* narrow windows: keep the right-hand tools reachable */
+@media (max-width: 760px) { #btnHome, #btnBack, #btnForward { display: none; } .search-input { width: 150px; } }

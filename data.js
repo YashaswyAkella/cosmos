@@ -20,7 +20,7 @@ const PC_LY  = 3.261564;
 const SUN = {
   id: 'sun', name: 'Sun', type: 'G2V main-sequence star', kind: 'star',
   radiusKm: 696340, color: '#ffd977', glow: '#ff9d2f',
-  poleRA: 286.13, poleDec: 63.87, rotationDays: 25.38,
+  poleRA: 286.13, poleDec: 63.87, W0: 84.176, rotationDays: 25.37999492,
   desc: 'The star that holds everything here in place — 99.86% of all the mass in the solar system. Light from its surface takes 8 minutes 20 seconds to reach Earth.',
   stats: {
     'Diameter': '1,392,700 km',
@@ -37,7 +37,7 @@ const PLANETS = [
   {
     id: 'mercury', name: 'Mercury', type: 'Terrestrial planet', kind: 'planet',
     radiusKm: 2439.7, color: '#9c8a7d', color2: '#4a413a',
-    poleRA: 281.01, poleDec: 61.42, rotationDays: 58.646,
+    poleRA: 281.01, poleDec: 61.42, W0: 329.5988, rotationDays: 58.6461459,
     el: { a:0.38709927, e:0.20563593, i:7.00497902, L:252.25032350, w:77.45779628, O:48.33076593,
           aD:0.00000037, eD:0.00001906, iD:-0.00594749, LD:149472.67411175, wD:0.16047689, OD:-0.12534081 },
     desc: 'The smallest planet and the fastest — it laps the Sun every 88 days. With almost no atmosphere it swings from 430 °C in daylight to −180 °C at night.',
@@ -46,7 +46,7 @@ const PLANETS = [
   {
     id: 'venus', name: 'Venus', type: 'Terrestrial planet', kind: 'planet',
     radiusKm: 6051.8, color: '#e8cda0', color2: '#8a6d42',
-    poleRA: 272.76, poleDec: 67.16, rotationDays: -243.025,
+    poleRA: 272.76, poleDec: 67.16, W0: 160.2, rotationDays: -243.01848399,
     el: { a:0.72333566, e:0.00677672, i:3.39467605, L:181.97909950, w:131.60246718, O:76.67984255,
           aD:0.00000390, eD:-0.00004107, iD:-0.00078890, LD:58517.81538729, wD:0.00268329, OD:-0.27769418 },
     desc: 'Earth\'s twin in size and nothing like it otherwise. A crushing carbon-dioxide atmosphere traps heat so effectively that its surface is hotter than Mercury\'s.',
@@ -55,13 +55,13 @@ const PLANETS = [
   {
     id: 'earth', name: 'Earth', type: 'Terrestrial planet', kind: 'planet',
     radiusKm: 6371, color: '#4b8fd6', color2: '#12365e',
-    poleRA: 0.0, poleDec: 90.0, rotationDays: 0.99727,
+    poleRA: 0.0, poleDec: 90.0, W0: 190.147, rotationDays: 0.99726963,
     el: { a:1.00000261, e:0.01671123, i:-0.00001531, L:100.46457166, w:102.93768193, O:0.0,
           aD:0.00000562, eD:-0.00004392, iD:-0.01294668, LD:35999.37244981, wD:0.32327364, OD:0.0 },
     desc: 'The only place in this entire map known to carry life. Liquid water covers 71% of the surface and an oxygen-rich atmosphere shields it from the Sun\'s hardest radiation.',
     stats: { 'Diameter':'12,742 km', 'Year':'365.25 days', 'Day':'23h 56m', 'Moons':'1', 'Mean temp':'15 °C', 'Atmosphere':'78% N₂, 21% O₂' },
     moons: [
-      { id:'moon', name:'Moon', radiusKm:1737.4, aKm:384400, periodDays:27.3217, color:'#c9c6bf', inc:5.1, refPlane:'ecliptic',
+      { id:'moon', name:'Moon', radiusKm:1737.4, aKm:384400, periodDays:27.3217, color:'#c9c6bf', inc:5.1, refPlane:'ecliptic', poleRA:269.9949, poleDec:66.5392, W0:38.3213, rotationDays:27.321582,
         desc:'Formed when a Mars-sized body struck the young Earth. It is slowly drifting away at 3.8 cm a year.',
         stats:{ 'Diameter':'3,475 km', 'Distance':'384,400 km', 'Orbit':'27.3 days', 'Gravity':'1/6 of Earth' } }
     ]
@@ -69,7 +69,7 @@ const PLANETS = [
   {
     id: 'mars', name: 'Mars', type: 'Terrestrial planet', kind: 'planet',
     radiusKm: 3389.5, color: '#d26a45', color2: '#6b2f1c',
-    poleRA: 317.68, poleDec: 52.89, rotationDays: 1.02595,
+    poleRA: 317.68, poleDec: 52.89, W0: 176.632, rotationDays: 1.02595676,
     el: { a:1.52371034, e:0.09339410, i:1.84969142, L:-4.55343205, w:-23.94362959, O:49.55953891,
           aD:0.00001847, eD:0.00007882, iD:-0.00813131, LD:19140.30268499, wD:0.44441088, OD:-0.29257343 },
     desc: 'Rusty iron oxide dust gives Mars its colour. It holds the tallest volcano in the solar system, Olympus Mons, at nearly three times the height of Everest.',
@@ -86,7 +86,7 @@ const PLANETS = [
   {
     id: 'jupiter', name: 'Jupiter', type: 'Gas giant', kind: 'planet',
     radiusKm: 69911, color: '#d8b48a', color2: '#8b5e3c',
-    poleRA: 268.06, poleDec: 64.50, rotationDays: 0.41354,
+    poleRA: 268.06, poleDec: 64.50, W0: 284.95, rotationDays: 0.41353833,
     el: { a:5.20288700, e:0.04838624, i:1.30439695, L:34.39644051, w:14.72847983, O:100.47390909,
           aD:-0.00011607, eD:-0.00013253, iD:-0.00183714, LD:3034.74612775, wD:0.21252668, OD:0.20469106 },
     desc: 'More massive than every other planet combined. The Great Red Spot is a storm wider than Earth that has been turning for at least 190 years.',
@@ -110,7 +110,7 @@ const PLANETS = [
   {
     id: 'saturn', name: 'Saturn', type: 'Gas giant', kind: 'planet',
     radiusKm: 58232, color: '#e3ce9b', color2: '#9c8351',
-    poleRA: 40.59, poleDec: 83.54, rotationDays: 0.44401,
+    poleRA: 40.59, poleDec: 83.54, W0: 38.9, rotationDays: 0.44400926,
     el: { a:9.53667594, e:0.05386179, i:2.48599187, L:49.95424423, w:92.59887831, O:113.66242448,
           aD:-0.00125060, eD:-0.00050991, iD:0.00193609, LD:1222.49362201, wD:-0.41897216, OD:-0.28867794 },
     desc: 'Its rings span 280,000 km but are often only about 10 metres thick — mostly water ice, from grains to house-sized boulders.',
@@ -135,7 +135,7 @@ const PLANETS = [
   {
     id: 'uranus', name: 'Uranus', type: 'Ice giant', kind: 'planet',
     radiusKm: 25362, color: '#a8dbe0', color2: '#3f7f8c',
-    poleRA: 257.31, poleDec: -15.18, rotationDays: -0.71833,
+    poleRA: 257.31, poleDec: -15.18, W0: 203.81, rotationDays: -0.71833333,
     el: { a:19.18916464, e:0.04725744, i:0.77263783, L:313.23810451, w:170.95427630, O:74.01692503,
           aD:-0.00196176, eD:-0.00004397, iD:-0.00242939, LD:428.48202785, wD:0.40805281, OD:0.04240589 },
     desc: 'Tipped over on its side by 98°, probably by an ancient collision, so it rolls around its orbit. Each pole gets 42 years of continuous sunlight, then 42 years of dark.',
@@ -153,7 +153,7 @@ const PLANETS = [
   {
     id: 'neptune', name: 'Neptune', type: 'Ice giant', kind: 'planet',
     radiusKm: 24622, color: '#4a6ed0', color2: '#1e2f78',
-    poleRA: 299.36, poleDec: 43.46, rotationDays: 0.67125,
+    poleRA: 299.36, poleDec: 43.46, W0: 249.978, rotationDays: 0.67125,
     el: { a:30.06992276, e:0.00859048, i:1.77004347, L:-55.12002969, w:44.96476227, O:131.78422574,
           aD:0.00026291, eD:0.00005105, iD:0.00035372, LD:218.45945325, wD:-0.32241464, OD:-0.00508664 },
     desc: 'Found by mathematics before anyone saw it — irregularities in Uranus\'s orbit gave away its position in 1846. Winds here reach 2,100 km/h, the fastest measured anywhere.',
@@ -172,7 +172,7 @@ const DWARFS = [
   {
     id:'pluto', name:'Pluto', type:'Dwarf planet', kind:'dwarf',
     radiusKm:1188.3, color:'#cbb49c', color2:'#6d5b4b',
-    poleRA:132.99, poleDec:-6.16, rotationDays:-6.3872,
+    poleRA:132.99, poleDec:-6.16, W0: 302.695, rotationDays:6.387223,
     el:{ a:39.48211675, e:0.24882730, i:17.14001206, L:238.92903833, w:224.06891629, O:110.30393684,
          aD:-0.00031596, eD:0.00005170, iD:0.00004818, LD:145.20780515, wD:-0.04062942, OD:-0.01183482 },
     desc:'For 20 years of every 248-year orbit Pluto is closer to the Sun than Neptune. New Horizons flew past in 2015 and found a nitrogen-ice plain shaped like a heart.',
@@ -461,6 +461,7 @@ const CATEGORIES = [
   { id:'nebulae',     name:'Nebulae',       sub:'Cosmic clouds of gas and dust', icon:'nebula' },
   { id:'galaxies',    name:'Galaxies',      sub:'Billions of star systems',     icon:'galaxy' },
   { id:'structure',   name:'Our Address',   sub:'From the Orion Spur to Laniakea', icon:'address' },
+  { id:'deepuniverse', name:'Deep Universe', sub:'Quasars, clusters and cosmic walls', icon:'quasar' },
   { id:'deepfields',  name:'Telescope Views', sub:'What Hubble, Webb and others stared at', icon:'deepfield' },
   { id:'constellations', name:'Constellations', sub:'The 88 figures of the sky', icon:'constellation' },
   { id:'blackholes',  name:'Black Holes',   sub:'Where gravity wins',           icon:'blackhole' }
@@ -1402,4 +1403,272 @@ const STRUCTURE = {
   observable: { id:'observable', name:'Observable universe', color:'#ffe6c8', radiusMly:46500, aliases:['universe', 'cosmic microwave background', 'CMB', 'edge of the universe'],
     desc:'Everything whose light has had time to reach us since the Big Bang. Its edge is the cosmic microwave background, light released 13.8 billion years ago; the matter that sent it has since been carried to about 46 billion light years away by the expansion of space. Beyond that boundary there is more universe, but no signal from it can have arrived yet.',
     stats:{ 'Radius':'≈46.5 billion light years', 'Age':'13.8 billion years', 'Galaxies':'≈200 billion to 2 trillion', 'Edge':'Cosmic microwave background, redshift ≈1,100', 'Beyond it':'Unobservable, not empty' } }
+};
+
+/* ---------------- The deep universe ----------------
+   Quasars, galaxy clusters, cosmic explosions and the first galaxies.
+   Objects with a redshift (z) are placed at their comoving distance from
+   the app's ΛCDM calculator; nearby ones use a measured distance (dMly). */
+const DEEP_UNIVERSE = [
+  /* quasars */
+  { id:'3c273', name:'3C 273', sub:'quasar', ra:12.4852, dec:2.0525, z:0.158, jet:'side', prio:60, aliases:['3C273','PKS 1226+023'],
+    desc:'The first quasar ever understood. In 1963 Maarten Schmidt realised its strange spectrum was ordinary hydrogen, redshifted so far that this "star" had to be billions of light years away — and so bright that it outshone whole galaxies. It is still the brightest quasar in our sky, visible in a good backyard telescope, with a jet 200,000 light years long.',
+    stats:{ 'Black hole':'≈900 million Suns', 'Discovered as a quasar':'1963', 'Jet':'≈200,000 light years' } },
+  { id:'3c48', name:'3C 48', sub:'quasar', ra:1.6281, dec:33.1597, z:0.367, aliases:['3C48'],
+    desc:'The first quasar found: a "radio star" in Triangulum identified in 1960, whose baffling spectrum was only decoded in 1963, just after 3C 273 showed the way.',
+    stats:{ 'Identified':'1960', 'Redshift measured':'1963' } },
+  { id:'ton618', name:'TON 618', sub:'quasar', ra:12.4736, dec:31.4772, z:2.219, prio:60, aliases:['TON618'],
+    desc:'A hyperluminous quasar in Canes Venatici powered by one of the most massive black holes known — an estimated 40 to 66 billion Suns, a shadow wider than our whole solar system many times over. It shines as brightly as about 140 trillion Suns.',
+    stats:{ 'Black hole':'≈40–66 billion Suns', 'Luminosity':'≈140 trillion Suns' } },
+  { id:'j0313', name:'J0313−1806', sub:'quasar', ra:3.2288, dec:-18.1101, z:7.64, prio:55, aliases:['J0313-1806','J0313'],
+    desc:'The most distant quasar known when it was found in 2021. Its black hole already weighed 1.6 billion Suns only 670 million years after the Big Bang — too big, too early for simple growth, which is why quasars like this matter.',
+    stats:{ 'Black hole':'≈1.6 billion Suns', 'Found':'2021' } },
+  { id:'j1342', name:'ULAS J1342+0928', sub:'quasar', ra:13.7023, dec:9.4772, z:7.54, aliases:['J1342+0928'],
+    desc:'A quasar from the era when the universe was still full of neutral hydrogen fog; its light shows that fog being burned away. Its black hole of about 800 million Suns was in place 690 million years after the Big Bang.',
+    stats:{ 'Black hole':'≈800 million Suns', 'Found':'2017' } },
+  { id:'j0100', name:'SDSS J0100+2802', sub:'quasar', ra:1.0036, dec:28.0405, z:6.30, aliases:['J0100+2802'],
+    desc:'The most luminous quasar known in the first billion years, powered by a black hole of about 12 billion Suns. It shines with the light of hundreds of trillions of Suns.',
+    stats:{ 'Black hole':'≈12 billion Suns', 'Found':'2015' } },
+  { id:'apm08279', name:'APM 08279+5255', sub:'lensed', ra:8.5282, dec:52.7547, z:3.91, aliases:['APM 08279'],
+    desc:'A quasar magnified by a galaxy in front of it. In 2011 astronomers found a reservoir of water vapour around its black hole holding 140 trillion times all the water in Earth\'s oceans — the largest store of water known.',
+    stats:{ 'Water':'≈140 trillion Earth oceans', 'Seen through':'A gravitational lens' } },
+  { id:'twinquasar', name:'Twin Quasar', sub:'lensed', ra:10.0224, dec:55.8983, z:1.41, aliases:['Q0957+561','QSO 0957+561'],
+    desc:'The first gravitational lens ever found, in 1979: one quasar seen twice, six arcseconds apart, because a galaxy in between bends its light along two paths. One path is 417 days longer, so the two images flicker the same way more than a year apart.',
+    stats:{ 'Discovered':'1979', 'Images':'2, six arcseconds apart', 'Time delay':'≈417 days' } },
+  { id:'einsteincross', name:'Einstein Cross', sub:'lensed', ra:22.6751, dec:3.3586, z:1.695, aliases:['Q2237+030','Q2237+0305','Huchra\'s Lens'],
+    desc:'A quasar split into four images around the core of a nearby galaxy that happens to lie almost exactly in front of it — the lensing galaxy is 20 times closer. Found by John Huchra in 1985.',
+    stats:{ 'Images':'4', 'Lensing galaxy':'≈400 million light years away', 'Discovered':'1985' } },
+  { id:'3c279', name:'3C 279', sub:'blazar', ra:12.9364, dec:-5.7894, z:0.536, jet:'us', aliases:['3C279'],
+    desc:'A blazar: a quasar whose jet points almost straight at us. It was one of the first sources seen with "faster than light" motion — an illusion from a jet racing toward us near light speed — and in 2020 the Event Horizon Telescope imaged the base of its jet.',
+    stats:{ 'Type':'Blazar — jet aimed at Earth', 'Superluminal motion':'Seen since 1971' } },
+  { id:'oj287', name:'OJ 287', sub:'blazar', ra:8.9136, dec:20.1086, z:0.306, jet:'us', aliases:['OJ287'],
+    desc:'A blazar that flares roughly every twelve years, a rhythm traced on photographic plates back to 1888. The favoured explanation is a pair of supermassive black holes, the smaller one punching through the larger one\'s disc on each orbit.',
+    stats:{ 'Outbursts':'≈ every 12 years', 'Records since':'1888', 'Likely':'A binary black hole' } },
+  /* clusters */
+  { id:'virgocluster', name:'Virgo Cluster', sub:'cluster', ra:12.45, dec:12.72, dMly:54, rMly:4, members:120, within:'virgosc', aliases:['Virgo'],
+    desc:'The nearest big cluster of galaxies and the heart of our Virgo Supercluster: 1,300 to 2,000 galaxies, with the giant elliptical M87 near its centre. Its gravity slows the whole Local Group\'s drift away from it.',
+    stats:{ 'Galaxies':'1,300–2,000', 'Centre':'Near M87' } },
+  { id:'fornaxcluster', name:'Fornax Cluster', sub:'cluster', ra:3.6414, dec:-35.45, dMly:62, rMly:2, members:55, aliases:['Fornax'],
+    desc:'A compact cluster of about sixty large galaxies in the southern sky, the second-richest within a hundred million light years.',
+    stats:{ 'Galaxies':'≈60 large' } },
+  { id:'comacluster', name:'Coma Cluster', sub:'cluster', ra:12.9969, dec:27.9806, dMly:321, rMly:10, members:140, within:'cfa2wall', aliases:['Abell 1656','Coma'],
+    desc:'More than a thousand galaxies in Coma Berenices. In 1933 Fritz Zwicky found they moved far too fast to be held together by the matter he could see, and named the missing ingredient dunkle Materie — dark matter.',
+    stats:{ 'Galaxies':'> 1,000', 'Famous for':'The first evidence of dark matter, 1933' } },
+  { id:'perseuscluster', name:'Perseus Cluster', sub:'cluster', ra:3.3, dec:41.5, dMly:240, rMly:6, members:110, within:'perseuspisces', aliases:['Abell 426'],
+    desc:'The brightest cluster in X-rays, filled with gas at tens of millions of degrees. In 2003 Chandra found pressure waves rippling out from the black hole at its centre — a sound, a B-flat 57 octaves below middle C.',
+    stats:{ 'Seen in':'X-rays, brightest of all clusters', 'Its sound':'B-flat, 57 octaves below middle C' } },
+  { id:'normacluster', name:'Norma Cluster', sub:'cluster', ra:16.2591, dec:-60.9083, dMly:220, rMly:5, members:90, within:'laniakea', aliases:['Abell 3627','Great Attractor'],
+    desc:'A massive cluster near the centre of the Great Attractor, the point our whole region of the universe is falling toward. It sits behind the plane of the Milky Way, so dust hid it until X-ray and radio surveys looked through.',
+    stats:{ 'Role':'Near the heart of Laniakea', 'Hidden by':'The Milky Way\'s dust' } },
+  { id:'bulletcluster', name:'Bullet Cluster', sub:'cluster', ra:6.9772, dec:-55.95, z:0.296, rMly:4, members:80, bullet:true, aliases:['1E 0657-558','1E 0657-56'],
+    desc:'Two clusters that smashed through each other. Their hot gas (seen in X-rays) collided and slowed, but most of their mass (mapped by gravitational lensing) sailed straight through — the clearest direct evidence that dark matter is real stuff, separate from ordinary matter.',
+    stats:{ 'Evidence published':'2006', 'Pink':'Hot gas, seen in X-rays', 'Blue':'Mass, mapped by lensing' } },
+  { id:'elgordo', name:'El Gordo', sub:'cluster', ra:1.0479, dec:-49.2494, z:0.870, rMly:5, members:100, aliases:['ACT-CL J0102-4915'],
+    desc:'"The Fat One": the most massive galaxy cluster known in the distant universe, about two to three thousand trillion Suns, itself the product of two clusters colliding. Found in 2012 by the shadow it casts on the cosmic microwave background.',
+    stats:{ 'Mass':'≈2–3 × 10¹⁵ Suns', 'Found':'2012' } },
+  /* explosions and signals */
+  { id:'gw170817', name:'GW170817', sub:'gw', ra:13.1634, dec:-23.3815, dMly:130, aliases:['NGC 4993','kilonova'],
+    desc:'Two neutron stars merging in the galaxy NGC 4993, caught on 17 August 2017 in gravitational waves and then light: a gamma-ray burst 1.7 seconds later, then a glowing kilonova that forged gold and platinum. The first event seen by both kinds of astronomy.',
+    stats:{ 'Date':'17 August 2017', 'Host galaxy':'NGC 4993', 'Made':'Gold, platinum and other heavy elements' } },
+  { id:'grb221009a', name:'GRB 221009A', sub:'grb', ra:19.2176, dec:19.7733, z:0.151, aliases:['BOAT','Brightest Of All Time'],
+    desc:'"The BOAT" — the brightest gamma-ray burst ever recorded, on 9 October 2022. A massive star collapsed into a black hole and fired jets aimed near Earth; bursts this bright are thought to reach us once in about ten thousand years.',
+    stats:{ 'Date':'9 October 2022', 'Nickname':'Brightest Of All Time' } },
+  { id:'grb090423', name:'GRB 090423', sub:'grb', ra:9.9259, dec:18.1494, z:8.2, aliases:['GRB090423'],
+    desc:'The death of one of the first massive stars, seen as a ten-second flash of gamma rays in April 2009. It happened about 630 million years after the Big Bang.',
+    stats:{ 'Date':'23 April 2009', 'Duration':'≈10 seconds' } },
+  { id:'frb121102', name:'FRB 20121102A', sub:'frb', ra:5.533, dec:33.1479, z:0.193, aliases:['FRB 121102'],
+    desc:'The first fast radio burst found to repeat — thousandth-of-a-second flashes of radio waves from a small galaxy three billion light years away. Repetition ruled out one-off catastrophes; the source is probably a young, highly magnetised neutron star.',
+    stats:{ 'First burst':'2012', 'Repeats':'Yes, the first found to' } },
+  /* the first galaxies and the farthest star */
+  { id:'gnz11', name:'GN-z11', sub:'early', ra:12.6071, dec:62.2421, z:10.603, aliases:['GN z11'],
+    desc:'Found by Hubble in 2016 and confirmed by Webb, which also saw signs of a growing black hole at its heart. For years it was the most distant galaxy known.',
+    stats:{ 'Found':'2016 (Hubble)', 'Confirmed':'2023 (Webb)' } },
+  { id:'jadesz14', name:'JADES-GS-z14-0', sub:'early', ra:3.5389, dec:-27.8556, z:14.32, prio:55, aliases:['JADES z14'],
+    desc:'One of the most distant galaxies confirmed, seen about 290 million years after the Big Bang — and surprisingly large and bright, with oxygen already in it, so stars had lived and died there even earlier.',
+    stats:{ 'Found':'2024 (Webb)', 'Size':'≈1,600 light years' } },
+  { id:'earendel', name:'Earendel', sub:'star', ra:1.62311, dec:-8.4645, z:6.2, aliases:['WHL0137-LS'],
+    desc:'The most distant single star ever seen, magnified thousands of times by a galaxy cluster in front of it. Its light left when the universe was under a billion years old. Its name is Old English for "morning star".',
+    stats:{ 'Found':'2022 (Hubble)', 'Magnified':'Thousands of times' } }
+];
+
+/* Walls, voids and superclusters of the cosmic web */
+const LARGE_STRUCTURES = [
+  { id:'cfa2wall', name:'CfA2 Great Wall', kind:'wall', dMly:300, color:'#b8a4ff', aliases:['Great Wall','Coma Wall'],
+    path:[[9.0,30],[10.5,28],[12.0,28],[13.0,28],[14.5,30],[16.0,30]],
+    desc:'The first "wall" of galaxies ever mapped, found in 1989 by Margaret Geller and John Huchra when they plotted galaxy distances slice by slice. A sheet about 500 million light years long passing through the Coma Cluster.',
+    stats:{ 'Length':'≈500 million light years', 'Found':'1989', 'Contains':'The Coma Cluster' } },
+  { id:'perseuspisces', name:'Perseus–Pisces Supercluster', kind:'wall', dMly:240, color:'#a8c4ff', aliases:['Perseus-Pisces'],
+    path:[[3.3,41.5],[2.3,37],[1.3,33],[0.3,30],[23.3,27]],
+    desc:'A long chain of clusters across Perseus and Pisces, one of the most prominent filaments near us, on the far side of the Local Void from the Virgo Supercluster.',
+    stats:{ 'Contains':'The Perseus Cluster', 'Shape':'A filament' } },
+  { id:'sloanwall', name:'Sloan Great Wall', kind:'wall', dMly:1000, color:'#ffb4d0', aliases:['SGW'],
+    path:[[8.8,2],[10.0,3],[11.2,2],[12.4,1],[13.6,0]],
+    desc:'A wall of galaxies 1.4 billion light years long, a billion light years away, found in 2003 in the Sloan Digital Sky Survey. For a time the largest known structure; it may not be gravitationally bound as one object.',
+    stats:{ 'Length':'≈1.4 billion light years', 'Found':'2003' } },
+  { id:'shapley', name:'Shapley Supercluster', kind:'supercluster', ra:13.47, dec:-31.5, dMly:650, rMly:100, color:'#ffc890', aliases:['Shapley Concentration'],
+    desc:'The largest concentration of galaxies within a billion light years — dozens of rich clusters and some ten thousand trillion Suns of mass. Beyond the Great Attractor, it adds to the pull on our part of the universe.',
+    stats:{ 'Mass':'≈10¹⁶ Suns', 'Clusters':'≈25 rich clusters' } },
+  { id:'bootesvoid', name:'Boötes Void', kind:'void', ra:14.83, dec:46, dMly:700, rMly:165, color:'#8f9bb8', aliases:['Bootes Void','Great Nothing'],
+    desc:'"The Great Nothing": a nearly empty sphere about 330 million light years across, found in 1981. A region that size would normally hold around ten thousand galaxies; only about sixty have been found in it.',
+    stats:{ 'Diameter':'≈330 million light years', 'Galaxies inside':'≈60, instead of thousands', 'Found':'1981' } },
+  { id:'localvoid', name:'Local Void', kind:'void', ra:18.6, dec:18, dMly:75, rMly:75, approx:true, color:'#8f9bb8',
+    desc:'The empty region right next door, beginning at the edge of the Local Group. As it expands it pushes us away from it, adding to our motion toward Virgo.',
+    stats:{ 'Size':'≥150 million light years across', 'Outline':'Approximate' } }
+];
+
+/* ---------------- More of the Local Group ----------------
+   Confirmed member galaxies with measured distances (mostly from
+   McConnachie 2012). "within" names the big galaxy a satellite orbits. */
+DEEP_SKY.push(
+  { id:'ngc185', name:'NGC 185', dwarf:true, within:'m31', sub:'galaxy', cat:'galaxies', ra:0.6494, dec:48.3375, d:2010000, size:8000, color:'#ddd4c6', tilt:0.6, flat:0.8,
+    desc:'A dwarf elliptical satellite of Andromeda, unusual for its kind because it still holds gas and has formed stars recently.', stats:{ 'Orbits':'Andromeda' } },
+  { id:'ngc147', name:'NGC 147', dwarf:true, within:'m31', sub:'galaxy', cat:'galaxies', ra:0.5534, dec:48.5089, d:2200000, size:10000, color:'#ddd4c6', tilt:-0.4, flat:0.6,
+    desc:'A faint dwarf spheroidal next to NGC 185 in the sky, orbiting Andromeda and being slowly stretched by it.', stats:{ 'Orbits':'Andromeda' } },
+  { id:'andi', name:'Andromeda I', dwarf:true, within:'m31', sub:'galaxy', cat:'galaxies', ra:0.7611, dec:38.0411, d:2430000, size:3000, color:'#d9d0c4', tilt:0.3, flat:0.8,
+    desc:'A dwarf spheroidal satellite of Andromeda, found on photographic plates by Sidney van den Bergh around 1970.', stats:{ 'Orbits':'Andromeda', 'Found':'≈1970' } },
+  { id:'andii', name:'Andromeda II', dwarf:true, within:'m31', sub:'galaxy', cat:'galaxies', ra:1.275, dec:33.4192, d:2130000, size:4000, color:'#d9d0c4', tilt:1.1, flat:0.75,
+    desc:'Another of Andromeda\'s dwarf spheroidal companions; its stars rotate around the long axis, a hint that it formed from a merger of two dwarfs.', stats:{ 'Orbits':'Andromeda' } },
+  { id:'ic10', name:'IC 10', dwarf:true, sub:'galaxy', cat:'galaxies', ra:0.3381, dec:59.3039, d:2590000, size:5000, color:'#cbd6f2', tilt:0.2, flat:0.85,
+    desc:'The only starburst galaxy in the Local Group, forming stars at a furious rate. It lies behind the dust of the Milky Way\'s disc, which kept it hidden until 1887.', stats:{ 'Kind':'Dwarf irregular, starburst' } },
+  { id:'ngc6822', name:"Barnard's Galaxy", aliases:['NGC 6822'], dwarf:true, sub:'galaxy', cat:'galaxies', ra:19.7491, dec:-14.7892, d:1500000, size:7000, color:'#cbd6f2', tilt:-0.9, flat:0.55,
+    desc:'Found by E. E. Barnard in 1884. In 1925 Edwin Hubble used its variable stars to show it lies far beyond the Milky Way — one of the first proofs that other galaxies exist.', stats:{ 'Kind':'Dwarf irregular', 'Found':'1884' } },
+  { id:'ic1613', name:'IC 1613', dwarf:true, sub:'galaxy', cat:'galaxies', ra:1.0799, dec:2.1178, d:2460000, size:10000, color:'#cbd6f2', tilt:0.4, flat:0.8,
+    desc:'A faint dwarf irregular almost free of dust, which makes its variable stars an unusually clean yardstick for measuring cosmic distances.', stats:{ 'Kind':'Dwarf irregular' } },
+  { id:'wlm', name:'Wolf–Lundmark–Melotte', aliases:['WLM'], dwarf:true, sub:'galaxy', cat:'galaxies', ra:0.0328, dec:-15.4608, d:3040000, size:8000, color:'#cbd6f2', tilt:1.4, flat:0.4,
+    desc:'A lonely dwarf galaxy at the outer edge of the Local Group, discovered by Max Wolf in 1909 and recognised as a galaxy by Knut Lundmark and Philibert Melotte in 1926.', stats:{ 'Kind':'Dwarf irregular', 'Found':'1909' } },
+  { id:'leoa', name:'Leo A', dwarf:true, sub:'galaxy', cat:'galaxies', ra:9.9907, dec:30.7464, d:2600000, size:5000, color:'#cbd6f2', tilt:0.1, flat:0.7,
+    desc:'An isolated dwarf whose stars are unusually young for a Local Group galaxy — most formed in the last eight billion years.', stats:{ 'Kind':'Dwarf irregular' } },
+  { id:'pegdig', name:'Pegasus Dwarf Irregular', aliases:['DDO 216'], dwarf:true, sub:'galaxy', cat:'galaxies', ra:23.4767, dec:14.7431, d:3000000, size:5000, color:'#cbd6f2', tilt:-0.3, flat:0.55,
+    desc:'A small, gas-rich dwarf galaxy in Pegasus, on the Andromeda side of the Local Group.', stats:{ 'Kind':'Dwarf irregular' } },
+  { id:'phoenixdw', name:'Phoenix Dwarf', dwarf:true, sub:'galaxy', cat:'galaxies', ra:1.8518, dec:-44.4447, d:1350000, size:2000, color:'#d4d2cc', tilt:0.7, flat:0.8,
+    desc:'A small galaxy caught between types: mostly old stars like a spheroidal dwarf, but with a little gas and recent star formation like an irregular.', stats:{ 'Kind':'Transition dwarf' } },
+  { id:'tucanadw', name:'Tucana Dwarf', dwarf:true, sub:'galaxy', cat:'galaxies', ra:22.6971, dec:-64.4194, d:2900000, size:2000, color:'#d9d0c4', tilt:-0.6, flat:0.75,
+    desc:'An isolated dwarf spheroidal at the far edge of the Local Group, too far from either big spiral to have been stripped by them.', stats:{ 'Kind':'Dwarf spheroidal' } },
+  { id:'cetusdw', name:'Cetus Dwarf', dwarf:true, sub:'galaxy', cat:'galaxies', ra:0.4364, dec:-11.0444, d:2460000, size:3000, color:'#d9d0c4', tilt:0.9, flat:0.7,
+    desc:'An isolated dwarf spheroidal found in 1999, made almost entirely of very old stars.', stats:{ 'Kind':'Dwarf spheroidal', 'Found':'1999' } },
+  { id:'aquariusdw', name:'Aquarius Dwarf', aliases:['DDO 210'], dwarf:true, sub:'galaxy', cat:'galaxies', ra:20.7811, dec:-12.8481, d:3500000, size:2000, color:'#cbd6f2', tilt:0.2, flat:0.6,
+    desc:'One of the faintest and most isolated dwarf irregulars in the Local Group, at its outskirts.', stats:{ 'Kind':'Dwarf irregular' } },
+  { id:'sagdig', name:'Sagittarius Dwarf Irregular', aliases:['SagDIG'], dwarf:true, sub:'galaxy', cat:'galaxies', ra:19.4997, dec:-17.6781, d:3500000, size:3000, color:'#cbd6f2', tilt:-1.2, flat:0.7,
+    desc:'A remote dwarf irregular near the edge of the Local Group. Not to be confused with the Sagittarius Dwarf Spheroidal, which is merging with the Milky Way.', stats:{ 'Kind':'Dwarf irregular' } },
+  /* satellites of the Milky Way */
+  { id:'leoi', name:'Leo I', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:10.1411, dec:12.3064, d:830000, size:2000, color:'#d9d0c4', tilt:0.4, flat:0.8,
+    desc:'One of the most distant satellites of the Milky Way. It sits just 12 arcminutes from the bright star Regulus, whose glare hid it until 1950.', stats:{ 'Orbits':'The Milky Way', 'Found':'1950' } },
+  { id:'leoii', name:'Leo II', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:11.2248, dec:22.1547, d:760000, size:1400, color:'#d9d0c4', tilt:-0.2, flat:0.9,
+    desc:'A small, distant dwarf spheroidal satellite of the Milky Way, found in 1950 alongside Leo I.', stats:{ 'Orbits':'The Milky Way', 'Found':'1950' } },
+  { id:'dracodw', name:'Draco Dwarf', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:17.3368, dec:57.9153, d:250000, size:2600, color:'#d9d0c4', tilt:1.4, flat:0.65,
+    desc:'One of the most dark-matter-dominated objects known: its stars move so fast that it must hold far more unseen mass than visible stars.', stats:{ 'Orbits':'The Milky Way', 'Found':'1954' } },
+  { id:'umi', name:'Ursa Minor Dwarf', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:15.1524, dec:67.2225, d:250000, size:2000, color:'#d9d0c4', tilt:0.9, flat:0.55,
+    desc:'A satellite made of ancient stars — almost all of them older than ten billion years. Star formation there stopped long ago.', stats:{ 'Orbits':'The Milky Way', 'Found':'1954' } },
+  { id:'sculptordw', name:'Sculptor Dwarf', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:1.0026, dec:-33.7092, d:280000, size:3000, color:'#d9d0c4', tilt:-0.5, flat:0.75,
+    desc:'The first dwarf spheroidal galaxy ever found, by Harlow Shapley in 1937 — a new kind of galaxy, faint and diffuse.', stats:{ 'Orbits':'The Milky Way', 'Found':'1937' } },
+  { id:'fornaxdw', name:'Fornax Dwarf', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:2.6665, dec:-34.4492, d:480000, size:5000, color:'#d9d0c4', tilt:0.3, flat:0.7,
+    desc:'The brightest dwarf spheroidal around the Milky Way, found in 1938. It has six globular clusters of its own.', stats:{ 'Orbits':'The Milky Way', 'Found':'1938', 'Globular clusters':'6' } },
+  { id:'carinadw', name:'Carina Dwarf', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:6.6935, dec:-50.9661, d:340000, size:2000, color:'#d9d0c4', tilt:1.0, flat:0.7,
+    desc:'A dwarf satellite that formed its stars in distinct bursts separated by billions of years of quiet.', stats:{ 'Orbits':'The Milky Way', 'Found':'1977' } },
+  { id:'sextansdw', name:'Sextans Dwarf', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:10.2175, dec:-1.6147, d:280000, size:3000, color:'#d9d0c4', tilt:-0.8, flat:0.7,
+    desc:'A very faint, spread-out satellite found in 1990, so diffuse it covers more sky than ten full Moons.', stats:{ 'Orbits':'The Milky Way', 'Found':'1990' } },
+  { id:'bootesi', name:'Boötes I', aliases:['Bootes I'], dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:14.0017, dec:14.5, d:215000, size:1000, color:'#d9d0c4', tilt:0.2, flat:0.6,
+    desc:'An "ultra-faint" dwarf found in 2006 in Sloan survey data: a few tens of thousands of old stars held together by dark matter.', stats:{ 'Orbits':'The Milky Way', 'Found':'2006' } },
+  { id:'crater2', name:'Crater II', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:11.8207, dec:-18.413, d:380000, size:7000, color:'#d9d0c4', tilt:0.5, flat:0.85,
+    desc:'A "feeble giant" found in 2016: one of the largest satellites of the Milky Way, yet so diffuse that it went unnoticed for decades.', stats:{ 'Orbits':'The Milky Way', 'Found':'2016' } },
+  { id:'antlia2', name:'Antlia 2', dwarf:true, within:'milkyway', sub:'galaxy', cat:'galaxies', ra:9.5924, dec:-36.7672, d:430000, size:18000, color:'#d9d0c4', tilt:-0.3, flat:0.8,
+    desc:'A ghost galaxy found in 2018 with the Gaia satellite: about as large as the Large Magellanic Cloud but thousands of times fainter, hidden behind the Milky Way\'s disc.', stats:{ 'Orbits':'The Milky Way', 'Found':'2018' } }
+);
+DEEP_SKY.forEach(function (d) {
+  if (d.id === 'm32' || d.id === 'm110') d.within = 'm31';
+  if (d.id === 'lmc' || d.id === 'smc' || d.id === 'sgrdsph') d.within = 'milkyway';
+});
+
+/* ---------------- Surfaces ----------------
+   What the bodies look like up close. Everything here is drawn procedurally
+   from real geography: band latitudes and colours for the giants, coastlines
+   and ice for Earth, the dark maria of the Moon, the albedo markings of Mars.
+   Longitudes are east, latitudes planetocentric. Rotation follows the IAU
+   prime-meridian angle W = W0 + rate·d, so each body turns at its true rate
+   and Earth shows the hemisphere that really faces the Sun at the simulated time. */
+const SURFACES = {
+  jupiter: {
+    bands: [ /* [south lat, north lat, colour] */
+      [-90, -48, '#b8a894'], [-48, -34, '#d4be9e'], [-34, -27, '#9a7860'], [-27, -21, '#e8d7b8'],
+      [-21, -7, '#b27a54'], [-7, 7, '#f2e4c6'], [7, 18, '#b57d56'], [18, 24, '#ead9bb'],
+      [24, 31, '#a37c5e'], [31, 42, '#d8c4a4'], [42, 90, '#b3a390'] ],
+    spots: [ { lat: -22, sys2Lon: 68, epochJd: 2460858, driftDegDay: 0.02, w: 12, h: 9, color: '#c9603f', name: 'Great Red Spot' } ],
+    atmosphere: '#e8d0a8'
+  },
+  saturn: {
+    bands: [ [-90, -60, '#c9b285'], [-60, -40, '#dcc58f'], [-40, -25, '#cdb27a'], [-25, -8, '#e6d29e'],
+             [-8, 8, '#f0dea9'], [8, 25, '#d9c184'], [25, 45, '#e2cd93'], [45, 65, '#cbb27b'], [65, 90, '#b9ad8c'] ],
+    atmosphere: '#e9d9a8'
+  },
+  uranus: { bands: [ [-90, -45, '#b6e0e4'], [-45, 45, '#a8dbe0'], [45, 90, '#bfe5e8'] ], atmosphere: '#bfe8ec' },
+  neptune: { bands: [ [-90, -55, '#4066c8'], [-55, -40, '#2e4da6'], [-40, -25, '#4a6ed0'], [-25, 25, '#4f74d6'], [25, 45, '#3c5fbf'], [45, 90, '#4569c9'] ],
+             spots: [ { lat: -32, lon: 200, w: 7, h: 3, color: '#e8f0ff', name: 'bright methane clouds' } ], atmosphere: '#7fa0ff' },
+  earth: {
+    ocean: '#2f6fbf', landColor: '#5f8f43', desert: '#c8b06a', ice: '#f2f5f7', atmosphere: '#7fb6ff',
+    iceCaps: [ [-90, -66], [80, 90] ],
+    /* coastlines, [lat, lon] pairs, simplified by hand from a world map */
+    land: [
+      /* North America */
+      [[71,-156],[69,-141],[70,-128],[68,-115],[72,-120],[74,-95],[70,-85],[63,-92],[58,-94],[55,-82],[62,-78],[58,-68],[60,-64],[52,-56],[47,-53],[45,-65],[42,-70],[40,-74],[35,-76],[31,-81],[25,-80],[28,-83],[30,-89],[29,-95],[26,-97],[21,-97],[18,-94],[21,-90],[16,-88],[15,-83],[11,-84],[8,-78],[8,-80],[10,-86],[14,-92],[16,-96],[20,-105],[23,-110],[28,-114],[32,-117],[34,-120],[38,-123],[43,-124],[48,-125],[54,-131],[58,-137],[60,-146],[59,-152],[57,-158],[55,-163],[58,-162],[62,-166],[65,-168],[67,-163]],
+      /* South America */
+      [[12,-72],[10,-62],[8,-60],[5,-52],[0,-50],[-2,-44],[-5,-35],[-8,-35],[-13,-39],[-23,-42],[-25,-48],[-33,-52],[-35,-57],[-39,-62],[-43,-65],[-47,-66],[-51,-69],[-54,-66],[-53,-72],[-47,-75],[-40,-74],[-33,-72],[-25,-70],[-18,-71],[-14,-76],[-6,-81],[-3,-80],[1,-79],[7,-77],[8,-77],[11,-75]],
+      /* Africa */
+      [[37,-6],[36,3],[37,10],[33,11],[31,20],[32,25],[31,32],[30,33],[27,34],[22,37],[15,40],[12,43],[11,51],[2,46],[-2,41],[-8,39],[-15,40],[-25,35],[-27,33],[-34,26],[-34,19],[-29,17],[-22,14],[-17,12],[-12,14],[-6,12],[-1,9],[4,7],[5,1],[6,-3],[5,-8],[8,-13],[12,-17],[15,-17],[21,-17],[27,-13],[33,-9]],
+      /* Eurasia */
+      [[37,-9],[43,-9],[44,-2],[48,-5],[49,-1],[51,2],[53,5],[54,9],[57,8],[58,11],[58,6],[62,5],[66,13],[70,20],[71,28],[69,33],[67,41],[66,44],[69,60],[73,70],[73,80],[76,100],[72,130],[71,150],[69,170],[66,-170],[64,-173],[62,178],[60,163],[52,158],[57,156],[60,152],[59,143],[54,137],[48,140],[43,132],[39,127],[35,129],[38,125],[40,122],[39,118],[34,120],[30,122],[25,119],[22,114],[20,108],[17,107],[10,107],[8,104],[13,100],[7,100],[1,103],[5,101],[8,98],[13,98],[16,94],[20,92],[22,89],[18,84],[13,80],[8,77],[13,74],[20,73],[23,69],[25,66],[25,58],[22,60],[17,55],[13,45],[16,42],[21,39],[25,37],[28,34],[31,32],[34,35],[36,36],[37,31],[41,29],[40,26],[38,22],[40,20],[44,13],[41,17],[38,16],[44,9],[43,5],[42,3],[40,0],[37,-2],[36,-6]],
+      /* Australia */
+      [[-12,131],[-11,136],[-15,137],[-17,141],[-11,142],[-16,146],[-20,149],[-25,153],[-30,153],[-34,151],[-38,148],[-39,146],[-36,137],[-32,134],[-34,124],[-34,116],[-32,115],[-26,113],[-20,118],[-17,123],[-14,127]],
+      /* Greenland */
+      [[83,-35],[77,-18],[70,-22],[65,-40],[60,-44],[62,-48],[68,-52],[76,-70],[80,-60]],
+      /* islands */
+      [[-12,49],[-16,50],[-25,47],[-25,44],[-20,44],[-13,48]],
+      [[45,142],[41,141],[35,140],[34,135],[31,131],[34,131],[37,137],[41,140]],
+      [[58,-3],[58,-6],[55,-6],[53,-4],[50,-5],[51,1],[53,0],[56,-2]],
+      [[7,117],[1,119],[-4,116],[-3,110],[1,109],[5,115]],
+      [[5,95],[2,99],[-3,104],[-6,106],[-5,102],[0,99]],
+      [[-2,131],[-3,135],[-2,141],[-4,145],[-8,148],[-10,150],[-8,145],[-5,138],[-4,133]],
+      [[-6,106],[-7,114],[-8,114],[-8,106]],
+      [[66,-22],[66,-15],[64,-14],[63,-22],[65,-24]],
+      [[18,121],[13,124],[12,121],[16,120]],
+      [[23,-82],[21,-77],[20,-75],[22,-80]],
+      [[-35,173],[-37,176],[-41,176],[-42,172],[-46,167],[-46,170],[-41,174],[-38,175]]
+    ],
+    greenlandIce: [[83,-35],[77,-18],[70,-22],[65,-40],[60,-44],[62,-48],[68,-52],[76,-70],[80,-60]],
+    deserts: [ { lat: 23, lon: 9, w: 48, h: 15 }, { lat: 24, lon: 46, w: 12, h: 7 }, { lat: -25, lon: 132, w: 16, h: 7 }, { lat: 40, lon: 88, w: 12, h: 5 } ],
+    clouds: 14
+  },
+  mars: {
+    base: '#c4633f', ice: '#f4efe6', atmosphere: '#e2b08a',
+    iceCaps: [ [-90, -83], [82, 90] ],
+    spots: [ /* dark albedo regions and bright basins */
+      { lat: 8, lon: 70, w: 14, h: 22, color: '#5e3a2a', name: 'Syrtis Major' },
+      { lat: 45, lon: 330, w: 22, h: 12, color: '#7a4a35', name: 'Mare Acidalium' },
+      { lat: -25, lon: 340, w: 30, h: 10, color: '#7d4b36', name: 'Mare Erythraeum' },
+      { lat: -30, lon: 200, w: 30, h: 8, color: '#7a4a35', name: 'Mare Sirenum' },
+      { lat: -22, lon: 215, w: 28, h: 8, color: '#804d38', name: 'Mare Cimmerium' },
+      { lat: -20, lon: 105, w: 20, h: 9, color: '#7a4a35', name: 'Mare Tyrrhenum' },
+      { lat: -26, lon: 270, w: 12, h: 8, color: '#6d4130', name: 'Solis Lacus' },
+      { lat: -42, lon: 70, w: 24, h: 14, color: '#e0a07c', name: 'Hellas' },
+      { lat: 5, lon: 250, w: 18, h: 16, color: '#d8865c', name: 'Tharsis' } ]
+  },
+  moon: {
+    base: '#c9c6bf', atmosphere: null,
+    spots: [ /* the maria, at their real positions on the near side */
+      { lat: 33, lon: -16, w: 22, h: 20, color: '#8f8c86', name: 'Mare Imbrium' },
+      { lat: 28, lon: 17, w: 14, h: 13, color: '#8f8c86', name: 'Mare Serenitatis' },
+      { lat: 8, lon: 31, w: 16, h: 14, color: '#8f8c86', name: 'Mare Tranquillitatis' },
+      { lat: -8, lon: 51, w: 15, h: 17, color: '#96938c', name: 'Mare Fecunditatis' },
+      { lat: 17, lon: 59, w: 12, h: 10, color: '#8c8983', name: 'Mare Crisium' },
+      { lat: -21, lon: -17, w: 14, h: 10, color: '#94918a', name: 'Mare Nubium' },
+      { lat: -24, lon: -39, w: 10, h: 10, color: '#94918a', name: 'Mare Humorum' },
+      { lat: 18, lon: -57, w: 22, h: 40, color: '#95928b', name: 'Oceanus Procellarum' },
+      { lat: 56, lon: 1, w: 40, h: 6, color: '#96938c', name: 'Mare Frigoris' },
+      { lat: -15, lon: 35, w: 9, h: 9, color: '#94918a', name: 'Mare Nectaris' },
+      { lat: 0, lon: 22, w: 8, h: 7, color: '#96938c', name: 'S. Tranquillitatis' },
+      { lat: 2, lon: 2, w: 7, h: 5, color: '#96938c', name: 'Sinus Medii' },
+      { lat: -43, lon: -11, w: 2.5, h: 2.5, color: '#efeeea', name: 'Tycho' },
+      { lat: 10, lon: -20, w: 2.5, h: 2.5, color: '#eae8e3', name: 'Copernicus' } ]
+  },
+  venus: { bands: [ [-90, 90, '#e8cda0'] ], atmosphere: '#ffe6b0' },
+  mercury: { base: '#9c8a7d', craters: 26 }
 };

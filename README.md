@@ -9,14 +9,17 @@ A hand-built 3D map of the cosmos that runs in the browser with no libraries, no
 - The solar system with real orbits (JPL J2000 elements), moons, dwarf planets, the famous asteroids and comets, and spacecraft from Voyager to Webb.
 - 109,000 stars, 105,000 galaxies with distances, 66,000 asteroids and comets, 16,500 satellites, 6,200 exoplanets and 3,600 nebulae and clusters, all searchable.
 - Telescope views: select Hubble, Webb, Chandra or Kepler to see the patches of sky they stared at, and zoom in to their real size.
-- A trip planner: pick any two places and see the distance and how long the journey takes at the speed of Apollo 11, Voyager, light and more.
+- A trip planner: pick any two places and see the distance and how long the journey takes at the speed of Apollo 11, Voyager, light and more, plus the next real launch window.
+- A size comparison: put any two things side by side to scale, from the Moon to the Milky Way.
+- Real phases and rotation: every world shows its true day and night side for the simulated time, the Moon keeps its real phase, and Settings → Realistic surfaces adds Earth's continents, Jupiter's belts and the Great Red Spot, Saturn's ring divisions and shadows, the Moon's maria and Mars's dark regions, all drawn from real geography.
 - The Milky Way itself: search for it and fly out to see the whole barred spiral from outside, with the Sun marked in the Local Arm, then keep zooming to see Andromeda beside it.
 - A cosmic address for everything: every object's panel shows where it sits, from the Orion Spur through the Milky Way, the Local Group, the Virgo Supercluster and Laniakea to the edge of the observable universe, and each step is a place you can fly to.
+- The deep universe: famous quasars like 3C 273 and TON 618, the Einstein Cross, the Bullet Cluster, gravitational-wave and gamma-ray-burst sources, the first galaxies, and the great walls and voids of the cosmic web, each placed by its redshift and coloured by how long its light has travelled.
 - 88 constellations by name, Sagittarius A*, pulsars, magnetars and black holes.
 
+## Feedback wanted
 
 This is a beta. It works best on a laptop or desktop; the phone layout is not finished yet. Please open an issue for anything confusing, wrong or slow, or for what you would like to see. Screenshots help.
-
 
 ## Controls
 
@@ -24,4 +27,4 @@ Drag to orbit, scroll to zoom, click to select, double-click to fly. Search at t
 
 ## Data credits
 
-HYG v4.0 (CC BY-SA 2.5), OpenNGC (CC BY-SA 4.0), HyperLEDA, NASA Exoplanet Archive, JPL Small-Body Database, Celestrak, Strasbourg-ESO planetary nebulae, Green's supernova remnants, Sharpless H II regions, JPL J2000 planetary elements. 
+HYG v4.0 (CC BY-SA 2.5), OpenNGC (CC BY-SA 4.0), HyperLEDA, NASA Exoplanet Archive, JPL Small-Body Database, Celestrak, Strasbourg-ESO planetary nebulae, Green's supernova remnants, Sharpless H II regions, JPL J2000 planetary elements.

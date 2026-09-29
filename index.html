@@ -42,6 +42,9 @@
       <button class="icon-btn" id="btnRoutePanel" title="Plan a trip">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="6" r="2.5"/><path d="M7 16.5 17 7.5" stroke-dasharray="3 3"/></svg>
       </button>
+      <button class="icon-btn" id="btnComparePanel" title="Compare sizes">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="13" r="7"/><circle cx="19" cy="7" r="3"/></svg>
+      </button>
       <button class="icon-btn" id="btnSettings" title="Settings">
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -112,6 +115,7 @@
         <button class="btn primary" id="btnGoto">Fly here</button>
         <button class="btn" id="btnFollow">Follow</button>
         <button class="btn" id="btnRoute" title="How long would the trip take?">Trip</button>
+        <button class="btn" id="btnCompare" title="Compare its size with something else">Size</button>
       </div>
     </aside>
 
@@ -136,7 +140,9 @@
       <label class="switch"><input type="checkbox" id="optDeepFields" checked><span>Telescope views (with telescopes)</span></label>
       <label class="switch"><input type="checkbox" id="optMilkyWay" checked><span>Milky Way glow</span></label>
       <label class="switch"><input type="checkbox" id="optProbes" checked><span>Spacecraft</span></label>
-      <label class="switch"><input type="checkbox" id="optRealSize"><span>True body sizes</span></label>
+      <label class="switch"><input type="checkbox" id="optSurfaces"><span>Realistic surfaces — maps, cloud bands, ring shadows</span></label>
+      <label class="switch"><input type="checkbox" id="optRealSize"><span>Genuine sizes only (no marker dots for distant bodies)</span></label>
+      <div class="seg-row"><span>Structures</span><div class="seg" id="segStructures"><button data-v="shells">Shells</button><button data-v="outlines">Outlines</button><button data-v="off">Off</button></div></div>
       <div class="popover-title" style="margin-top:10px">More objects</div>
       <label class="switch"><input type="checkbox" id="optAllStars"><span id="lblAllStars">Deep star field</span></label>
       <label class="switch"><input type="checkbox" id="optAllGalaxies"><span id="lblAllGalaxies">All galaxies</span></label>
@@ -212,6 +218,22 @@
       <div class="route-row"><label>To</label><div class="picker"><input id="routeTo" type="text" autocomplete="off" placeholder="Search a destination…"><div class="picker-list" id="routeToList"></div></div></div>
       <button class="btn tiny" id="routeSwap">Swap</button>
       <div id="routeResult"></div>
+    </section>
+
+    <!-- Size comparison -->
+    <section class="route-panel hidden" id="comparePanel">
+      <button class="panel-close" id="compareClose" title="Close">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <h2>Compare sizes</h2>
+      <div class="route-row"><label>This</label><div class="picker"><input id="compareA" type="text" autocomplete="off" placeholder="Earth"><div class="picker-list" id="compareAList"></div></div></div>
+      <div class="route-row"><label>With</label><div class="picker"><input id="compareB" type="text" autocomplete="off" placeholder="Search anything with a size…"><div class="picker-list" id="compareBList"></div></div></div>
+      <div class="compare-quick" id="compareQuick">
+        <button class="btn tiny" id="compareSwap">Swap</button>
+        <button class="btn tiny" data-id="moon">Moon</button><button class="btn tiny" data-id="earth">Earth</button><button class="btn tiny" data-id="jupiter">Jupiter</button>
+        <button class="btn tiny" data-id="sun">Sun</button><button class="btn tiny" data-id="betelgeuse">Betelgeuse</button><button class="btn tiny" data-id="sgrA">Sgr A*</button><button class="btn tiny" data-id="milkyway">Milky Way</button>
+      </div>
+      <div id="compareResult"></div>
     </section>
 
     <div class="toast" id="toast"></div>
