@@ -1511,7 +1511,7 @@ const LARGE_STRUCTURES = [
   { id:'bootesvoid', name:'Boötes Void', kind:'void', ra:14.83, dec:46, dMly:700, rMly:165, color:'#8f9bb8', aliases:['Bootes Void','Great Nothing'],
     desc:'"The Great Nothing": a nearly empty sphere about 330 million light years across, found in 1981. A region that size would normally hold around ten thousand galaxies; only about sixty have been found in it.',
     stats:{ 'Diameter':'≈330 million light years', 'Galaxies inside':'≈60, instead of thousands', 'Found':'1981' } },
-  { id:'localvoid', name:'Local Void', kind:'void', ra:18.6, dec:18, dMly:75, rMly:75, approx:true, color:'#8f9bb8',
+  { id:'localvoid', name:'Local Void', kind:'void', ra:18.6, dec:18, dMly:75, rMly:78, approx:true, color:'#8f9bb8',
     desc:'The empty region right next door, beginning at the edge of the Local Group. As it expands it pushes us away from it, adding to our motion toward Virgo.',
     stats:{ 'Size':'≥150 million light years across', 'Outline':'Approximate' } }
 ];
@@ -1672,3 +1672,62 @@ const SURFACES = {
   venus: { bands: [ [-90, 90, '#e8cda0'] ], atmosphere: '#ffe6b0' },
   mercury: { base: '#9c8a7d', craters: 26 }
 };
+
+/* ---------------- Deep time ----------------
+   The future of the universe as we know it, from next year to 10^100 years.
+   log = log10(years from now). tag: calc = computed in this app from measured
+   data; pred = the accepted prediction of current models; spec = speculative.
+   shot = where the guided camera looks. */
+const DEEP_TIME = [
+  { log: 0.0,   tag: 'calc', shot: 'solar', title: 'Time speeds up',
+    text: 'Every second, time runs about ten times faster than the second before. Watch the planets turn into rings of light.' },
+  { log: 2.48,  tag: 'pred', shot: 'solar', title: 'Voyager 1 reaches the Oort cloud',
+    text: 'About 300 years from now the spacecraft enters the inner edge of the comet cloud around the Sun, still silent and still coasting.' },
+  { log: 4.08,  tag: 'calc', shot: 'solar', title: 'Vega becomes the pole star',
+    text: 'Earth\'s axis wobbles like a spinning top once every 25,800 years. Around the year 14,000 it points near Vega instead of Polaris.' },
+  { log: 4.45,  tag: 'pred', shot: 'orion', title: 'Alpha Centauri comes closest',
+    text: 'In about 28,000 years our nearest neighbours pass 3.2 light years from the Sun, then slowly move away again.' },
+  { log: 5.0,   tag: 'pred', shot: 'orion', title: 'Betelgeuse explodes',
+    text: 'The red supergiant in Orion dies as a supernova some time in the next 100,000 years, bright enough to see in daylight for weeks.' },
+  { log: 6.11,  tag: 'pred', shot: 'orion', title: 'A star brushes the comet cloud',
+    text: 'In 1.3 million years the star Gliese 710 passes within 0.2 light years of the Sun, nudging comets toward the planets.' },
+  { log: 8.36,  tag: 'calc', shot: 'galaxy', title: 'One galactic year',
+    text: 'The Sun completes a full orbit of the Milky Way, about 170,000 light years, in roughly 230 million years.' },
+  { log: 8.78,  tag: 'pred', shot: 'earth', title: 'The last total solar eclipse',
+    text: 'The Moon drifts away 3.8 cm a year. In about 600 million years it looks too small to cover the Sun completely.' },
+  { log: 9.0,   tag: 'pred', shot: 'earth', title: 'Earth\'s oceans boil away',
+    text: 'The Sun brightens about 10% every billion years. By now Earth is too hot for liquid water, and life as we know it ends.' },
+  { log: 9.65,  tag: 'pred', shot: 'lg', title: 'Andromeda arrives',
+    text: 'The two big galaxies pass through each other and may merge into one giant elliptical. A 2025 study puts the chance of a merger within 10 billion years at about 50%.' },
+  { log: 9.732, tag: 'pred', shot: 'solarWide', title: 'The Sun runs out of hydrogen',
+    text: 'About 5.4 billion years from now the core\'s hydrogen is spent. The Sun begins to swell.' },
+  { log: 9.880, tag: 'pred', shot: 'solarWide', title: 'A red giant',
+    text: 'The Sun grows about 250 times wider than today, swallowing Mercury and Venus. Earth is probably engulfed too.' },
+  { log: 9.888, tag: 'pred', shot: 'solarWide', title: 'A white dwarf',
+    text: 'The Sun puffs off its outer layers as a glowing nebula. Its core remains: a white dwarf the size of Earth, slowly cooling.' },
+  { log: 11.18, tag: 'calc', shot: 'cosmos', title: 'The sky empties',
+    text: 'Space expands ever faster. Every galaxy beyond our own group drifts past the horizon and fades from view for good.' },
+  { log: 13.0,  tag: 'pred', shot: 'galaxy', title: 'The last stars go out',
+    text: 'Gas for new stars runs out. Red dwarfs, the smallest stars, burn longest — up to about 10 trillion years — then they too go dark.' },
+  { log: 14.0,  tag: 'pred', shot: 'galaxy', title: 'The Degenerate Era',
+    text: 'No starlight remains, only cooling white dwarfs, neutron stars and black holes. The Sun has become a cold black dwarf.' },
+  { log: 19.5,  tag: 'pred', shot: 'galaxy', title: 'Galaxies evaporate',
+    text: 'Close encounters fling dead stars out into intergalactic space. The rest spiral into the central black hole.' },
+  { log: 34.2,  tag: 'spec', shot: 'bh', title: 'Do protons decay?',
+    text: 'If protons are unstable, the matter in dead stars slowly dissolves. Experiments show they last at least 10³⁴ years — perhaps forever.' },
+  { log: 40.0,  tag: 'pred', shot: 'bh', title: 'The Black Hole Era',
+    text: 'Only black holes remain, each leaking a faint glow of Hawking radiation and very slowly losing mass.' },
+  { log: 67.3,  tag: 'pred', shot: 'bh', title: 'Small black holes evaporate',
+    text: 'A black hole the mass of the Sun takes about 10⁶⁷ years to evaporate. The ones made by dead stars vanish around now.' },
+  { log: 87.2,  tag: 'pred', shot: 'bh', title: 'Sagittarius A* evaporates',
+    text: 'The black hole at the heart of our galaxy, 4.3 million Suns, finally radiates away in a last flash.' },
+  { log: 100.3, tag: 'pred', shot: 'bh', title: 'The Dark Era',
+    text: 'The largest black holes, a hundred billion Suns, are gone by about 10¹⁰⁰ years. What remains is cold, dark and still expanding — as far as physics can see.' }
+];
+/* how the Sun changes: [years from now, radius in Suns, colour] — after Schröder & Smith 2008 */
+const SUN_TRACK = [
+  [0, 1.0, '#ffd977'], [1e9, 1.08, '#ffd977'], [4e9, 1.3, '#ffdc85'], [5.4e9, 1.6, '#ffd27a'],
+  [6.5e9, 2.3, '#ffc070'], [7.2e9, 10, '#ffa060'], [7.5e9, 80, '#ff8048'], [7.59e9, 256, '#ff6a3a'],
+  [7.6e9, 11, '#ffb070'], [7.69e9, 12, '#ffb070'], [7.71e9, 150, '#ff7040'], [7.72e9, 0.013, '#e8eeff'],
+  [1e10, 0.013, '#f4f6ff'], [1e12, 0.013, '#ffd2a0'], [1e14, 0.013, '#c0603a'], [1e15, 0.013, '#5a2010'], [1e16, 0.013, '#000000']
+];

@@ -819,6 +819,7 @@ function drawRegions() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let i = 0; i < STRUCT.regions.length; i++) {
     const g = STRUCT.regions[i], o = g.obj;
+    if (deep.on && ((deep.shot !== 'cosmos' && deep.shot !== 'lg') || (o.id !== 'localgroup' && o.id !== 'observable' && deep.horizonFade < 0.5))) continue;
     const dx = g.centre.x - camPos.x, dy = g.centre.y - camPos.y, dz = g.centre.z - camPos.z;
     const dist = Math.hypot(dx, dy, dz);
     if (g.path) { drawWall(g, dist); continue; }
@@ -1107,7 +1108,7 @@ const SBDB_CLASS = [
 ];
 
 function drawSmallBodies(sunScreen) {
-  const S = bulkSbdb; if (!S || cam.dist > 6000) return;
+  const S = bulkSbdb; if (!S || cam.dist > 6000 || deep.on) return;
   const px = camPos.x, py = camPos.y, pz = camPos.z;
   const fx = fwd.x, fy = fwd.y, fz = fwd.z, rx = right.x, ry = right.y, rz = right.z, ux = up.x, uy = up.y, uz = up.z;
   const on = [opts.mainbelt, opts.neo, opts.trojans, opts.tno, opts.comets, opts.comets];
@@ -1229,7 +1230,7 @@ function galType(t) {
    position angle of the few galaxies large enough to draw as ellipses */
 const NORTH_ECL = eqToEcl(0, 0, 1);
 function drawBulkGalaxies() {
-  const G = bulkGal; if (!G || !opts.galaxies) return;
+  const G = bulkGal; if (!G || !opts.galaxies || (deep.on && deep.horizonFade <= 0.01)) return;
   const camR = Math.hypot(camPos.x, camPos.y, camPos.z);
   const far = camR > 1.5e6 * LY_AU;                /* well outside the Milky Way: real parallax */
   const px = camPos.x, py = camPos.y, pz = camPos.z;
@@ -1239,7 +1240,7 @@ function drawBulkGalaxies() {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const nDraw = opts.allGalaxies ? G.n : G.defaultN;
-  const farFade = 1 - 0.85 * clamp((camR / LY_AU - 3e9) / 2e10, 0, 1);   /* a speck from the edge of the universe */
+  const farFade = (1 - 0.85 * clamp((camR / LY_AU - 3e9) / 2e10, 0, 1)) * (deep.on ? deep.horizonFade : 1);   /* a speck from the edge of the universe */
   for (let i = 0; i < nDraw && drawn < budget; i++) {
     let vz, sx, sy, range;
     if (far) {
@@ -1373,7 +1374,7 @@ function satsVisible() {
   return Math.hypot(camPos.x - e.x, camPos.y - e.y, camPos.z - e.z) < 0.02;   /* within ~3 million km */
 }
 function drawSatellites() {
-  if (!satsVisible()) return;
+  if (!satsVisible() || deep.on) return;
   const S = bulkSat;
   satUpdate(simJd);
   const px = camPos.x, py = camPos.y, pz = camPos.z;
@@ -1587,6 +1588,8 @@ const cam = {
   dist: 48, distGoal: 48,
   yaw: -1.05, yawGoal: -1.05,
   pitch: 0.42, pitchGoal: 0.42,
+  roll: 0, rollGoal: 0,             // tilt of the horizon; stays 0 unless free rotation is on
+  pendYaw: 0, pendPitch: 0,         // free rotation still to be applied (smoothed like the goals)
   fov: 50 * DEG, fovGoal: 50 * DEG,
   follow: null,
   flight: null
@@ -1594,6 +1597,10 @@ const cam = {
 let camPos = { x: 0, y: 0, z: 0 }, fwd = { x: 0, y: 0, z: 1 }, right = { x: 1, y: 0, z: 0 }, up = { x: 0, y: 1, z: 0 };
 let focal = 600, cx = 0, cy = 0;
 
+/* Deep time: the future of the universe, played forward on a log clock (see the
+   module near the end of this file). Declared here so the draw passes can read it. */
+const deep = { on: false, logY: 0, Y: 1, playing: false, hold: 0, chapter: -1, takeover: false,
+               yrsPerSec: 0, horizonFade: 1, galaxyFade: 1, merge: 0, sunMaxR: 1, clock: 0 };
 const MIN_DIST = 1e-5, MAX_DIST = 1e16;        /* out to beyond the edge of the observable universe */
 /* The sky can be magnified like a telescope: the field of view narrows from the
    50° walk-around view down to about an arcminute, enough to fill the screen with
@@ -1614,6 +1621,7 @@ function updateCamera(dt) {
     cam.distGoal = Math.exp(lerp(Math.log(f.fd), Math.log(f.td), e));
     if (f.yaw != null) cam.yawGoal = lerp(f.fyaw, f.yaw, e);
     if (f.pitch != null) cam.pitchGoal = lerp(f.fpitch, f.pitch, e);
+    cam.rollGoal = 0; cam.pendYaw = cam.pendPitch = 0;       /* a flight always arrives level */
     if (t >= 1) { cam.follow = f.noFollow ? null : dest.id; cam.flight = null; updateFocusChip(); }
   }
   const following = cam.follow && byId[cam.follow] && !cam.flight;
@@ -1634,31 +1642,66 @@ function updateCamera(dt) {
     cam.ty = lerp(cam.ty, cam.gy, k);
     cam.tz = lerp(cam.tz, cam.gz, k);
   }
+  if (!opts.freeRotate && !deep.on) { cam.rollGoal = 0; cam.pendYaw = cam.pendPitch = 0; }   /* the level horizon returns */
   cam.yaw = lerp(cam.yaw, cam.yawGoal, k);
   cam.pitch = lerp(cam.pitch, cam.pitchGoal, k);
+  cam.roll = lerp(cam.roll, cam.rollGoal, k);
   cam.dist = Math.exp(lerp(Math.log(cam.dist), Math.log(cam.distGoal), k));
   cam.fov = Math.exp(lerp(Math.log(cam.fov), Math.log(cam.fovGoal), k));
   focal = (H / 2) / Math.tan(cam.fov / 2);
 
-  const cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  /* Free rotation: a trackball. The drag turns the view about the camera's own
+     axes, so there is no pole to stop at; the horizon is free to tilt. */
+  if (opts.freeRotate && !cam.flight && Math.abs(cam.pendYaw) + Math.abs(cam.pendPitch) > 1e-7) {
+    const a = cam.pendYaw * k, b = cam.pendPitch * k;
+    cam.pendYaw -= a; cam.pendPitch -= b;
+    const F0 = camFrame(cam.yaw, cam.pitch, cam.roll);
+    const d1 = rotateAbout(F0.d, F0.up, a);                       /* sideways: about the camera's up */
+    const cb = Math.cos(b), sb = Math.sin(b);
+    const d2 = { x: d1.x * cb + F0.up.x * sb, y: d1.y * cb + F0.up.y * sb, z: d1.z * cb + F0.up.z * sb };
+    const u2 = { x: F0.up.x * cb - d1.x * sb, y: F0.up.y * cb - d1.y * sb, z: F0.up.z * cb - d1.z * sb };
+    const e = camAngles(d2, u2, cam.yaw);
+    cam.yaw = cam.yawGoal = e.yaw; cam.pitch = cam.pitchGoal = e.pitch; cam.roll = cam.rollGoal = e.roll;
+  }
+  const Fr = camFrame(cam.yaw, cam.pitch, cam.roll);
   if (cam.fov < FOV_DEFAULT * 0.98 && byId.earth) {
     /* Telescope view: stand on Earth and look outward. The orbit target is pushed
        out along the line of sight so the camera position lands exactly on Earth,
        instead of the Sun and planets sitting in front of the patch of sky. */
     const e = byId.earth.pos;
-    cam.tx = e.x - cam.dist * cp * Math.cos(cam.yaw);
-    cam.ty = e.y - cam.dist * cp * Math.sin(cam.yaw);
-    cam.tz = e.z - cam.dist * sp;
+    cam.tx = e.x - cam.dist * Fr.d.x;
+    cam.ty = e.y - cam.dist * Fr.d.y;
+    cam.tz = e.z - cam.dist * Fr.d.z;
   }
-  camPos = {
-    x: cam.tx + cam.dist * cp * Math.cos(cam.yaw),
-    y: cam.ty + cam.dist * cp * Math.sin(cam.yaw),
-    z: cam.tz + cam.dist * sp
-  };
-  fwd = norm({ x: cam.tx - camPos.x, y: cam.ty - camPos.y, z: cam.tz - camPos.z });
-  const worldUp = Math.abs(fwd.z) > 0.999 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 0, z: 1 };
-  right = norm(cross(fwd, worldUp));
-  up = cross(right, fwd);
+  camPos = { x: cam.tx + cam.dist * Fr.d.x, y: cam.ty + cam.dist * Fr.d.y, z: cam.tz + cam.dist * Fr.d.z };
+  fwd = { x: -Fr.d.x, y: -Fr.d.y, z: -Fr.d.z };
+  right = Fr.right;
+  up = Fr.up;
+}
+/* The camera's axes from its three angles. With no roll this is the classic
+   turntable: north stays up. The closed form has no special case at the poles. */
+function camFrame(yaw, pitch, roll) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const d = { x: cp * cy, y: cp * sy, z: sp };                  /* from the target to the camera */
+  const r0 = { x: -sy, y: cy, z: 0 }, u0 = { x: -sp * cy, y: -sp * sy, z: cp };
+  if (!roll) return { d: d, right: r0, up: u0 };
+  const cr = Math.cos(roll), sr = Math.sin(roll);
+  return { d: d,
+           right: { x: r0.x * cr + u0.x * sr, y: r0.y * cr + u0.y * sr, z: r0.z * cr + u0.z * sr },
+           up: { x: u0.x * cr - r0.x * sr, y: u0.y * cr - r0.y * sr, z: u0.z * cr - r0.z * sr } };
+}
+/* ...and back: the three angles that describe a given view direction and up vector */
+function camAngles(d, upv, prevYaw) {
+  const pitch = Math.asin(clamp(d.z, -1, 1));
+  let yaw = Math.hypot(d.x, d.y) > 1e-6 ? Math.atan2(d.y, d.x) : prevYaw;
+  yaw += TAU * Math.round((prevYaw - yaw) / TAU);
+  const L = camFrame(yaw, pitch, 0);
+  const roll = Math.atan2(-(upv.x * L.right.x + upv.y * L.right.y + upv.z * L.right.z), upv.x * L.up.x + upv.y * L.up.y + upv.z * L.up.z);
+  return { yaw: yaw, pitch: pitch, roll: roll };
+}
+function rotateAbout(v, axis, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang), dot = v.x * axis.x + v.y * axis.y + v.z * axis.z, x = cross(axis, v);
+  return { x: v.x * c + x.x * s + axis.x * dot * (1 - c), y: v.y * c + x.y * s + axis.y * dot * (1 - c), z: v.z * c + x.z * s + axis.z * dot * (1 - c) };
 }
 
 function project(p) {
@@ -1717,7 +1760,7 @@ const opts = {
   mainbelt: true, neo: true, trojans: true, tno: true, comets: true,
   galaxies: true, satellites: false,
   allStars: false, allGalaxies: false, allSmallBodies: false, probes: true, realSize: false,
-  constellations: true, deepfields: true, structures: 'shells', surfaces: false,
+  constellations: true, deepfields: true, structures: 'shells', surfaces: false, freeRotate: false,
   mwGain: 0.30           /* Milky Way brightness — calibrated against the reference */
 };
 
@@ -1751,7 +1794,7 @@ function overlapsLabel(box) {
 function drawMilkyWay() {
   if (!MW || !opts.milkyway) return;
   const camR = Math.hypot(camPos.x, camPos.y, camPos.z) / LY_AU;
-  const fade = clamp((camR - 1500) / 4500, 0, 1);
+  const fade = clamp((camR - 1500) / 4500, 0, 1) * (deep.on ? deep.galaxyFade * (1 - 0.88 * deep.merge) : 1);
   if (fade <= 0.005) return;
   const C = MW.centre;
   const c = project(C);
@@ -1905,7 +1948,7 @@ function drawSky() {
       if (p.x < -r || p.x > W + r || p.y < -r || p.y > H + r) continue;
       const want = b.dust ? 'source-over' : 'lighter';
       if (want !== mode) { ctx.globalCompositeOperation = want; mode = want; }
-      const a = b.a * fade * opts.mwGain;
+      const a = b.a * fade * opts.mwGain * (deep.on ? deep.galaxyFade : 1);
       const soft = b.col.replace('rgb(', 'rgba(').replace(')', ',');
       const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
       g.addColorStop(0, soft + a.toFixed(4) + ')');
@@ -1969,8 +2012,10 @@ function drawBulkStars(fade) {
   let bucket = -1, drawn = 0;
   const budget = 30000;
   const nDraw = opts.allStars ? n : S.defaultN;
+  const life = deep.on ? starLives() : null, dY = deep.Y;
 
   for (let i = 0; i < nDraw && drawn < budget; i++) {
+    if (life && life[i] < dY) continue;                 /* this star has already died */
     const dx = S.x[i] - px, dy = S.y[i] - py, dz = S.z[i] - pz;
     const vz = dx * fx + dy * fy + dz * fz;
     if (vz <= 1e-6) continue;
@@ -2015,7 +2060,7 @@ function drawBulkStars(fade) {
 
 /* 12,000 NGC/IC objects as faint smudges on the celestial sphere */
 function drawBulkDso() {
-  if (!bulkDso || !opts.ngc) return;
+  if (!bulkDso || !opts.ngc || (deep.on && deep.Y > 1e8)) return;
   const fade = skyFade();
   if (fade <= 0.03) return;
   const D = bulkDso, n = D.n, INV = 1 / 32767;
@@ -2058,6 +2103,7 @@ function drawBulkDso() {
 }
 
 function drawBelts() {
+  if (deep.on && deep.Y > 1e15) return;
   const days = simJd - J2000;
   for (let f = 0; f < beltFields.length; f++) {
     const field = beltFields[f];
@@ -2270,7 +2316,7 @@ function paintSphere(p, r, o, sunScreen) {
   const Lx = L.x * DF.e1.x + L.y * DF.e1.y + L.z * DF.e1.z;
   const Ly = -(L.x * DF.e2.x + L.y * DF.e2.y + L.z * DF.e2.z);
   const Lz = L.x * toCam.x + L.y * toCam.y + L.z * toCam.z;      /* > 0: the Sun is behind us */
-  const S = SURFACES[o.id] || null;
+  const S = o.dry ? null : (SURFACES[o.id] || null);
   const F = (S && opts.surfaces && r > 8) ? bodyFrame(o) : null;
 
   ctx.save();
@@ -2754,7 +2800,8 @@ function render(dt) {
       if (!o.el || o.kind === 'probe') continue;
       if (o.kind === 'dwarf' && cam.dist > 30000) continue;
       if (o.kind === 'dwarf' && o.category !== 'dwarfs' && selectedId !== o.id && cam.follow !== o.id) continue;
-      const a = o.kind === 'planet' ? 0.30 : 0.18;
+      let a = o.kind === 'planet' ? 0.30 : 0.18;
+      if (deep.on) { if (deepGone(o) || deep.shot === 'earth') continue; if (o.deepBlur) a = 0.62; }   /* a planet moving too fast to see becomes a ring of light */
       drawOrbit(o, T, selectedId === o.id ? 0.75 : a);
     }
     for (let i = 0; i < objects.length; i++) {
@@ -2856,6 +2903,7 @@ function render(dt) {
     if (o.kind === 'moon' && !opts.moons) continue;
     if (o.kind === 'probe' && !opts.probes) continue;
     if (o.kind === 'distant' && !deepVisible(o, camFromSunLy)) continue;
+    if (deep.on && deepHidden(o)) continue;
     /* faint dwarf galaxies would only clutter the sky from home */
     if (o.data && o.data.dwarf && camFromSunLy < 40000 && selectedId !== o.id && focusCategory !== 'galaxies' && selectedId !== 'localgroup') continue;
     const p = project(o.pos);
@@ -2913,12 +2961,13 @@ function render(dt) {
 
       if (rPx > 2.0) {
         /* a resolved star: wide atmosphere, corona, tight halo, then the disc */
-        glow(p, Math.max(rPx * 34, 170), 'rgb(255,214,160)', clamp(0.06 + bright * 0.14, 0.06, 0.20));
-        glow(p, Math.max(rPx * 13, 70), 'rgb(255,230,185)', clamp(0.20 + bright * 0.40, 0.20, 0.60));
+        const gk = (deep.on && o.kind === 'sun') ? 0.12 : 1;     /* a giant Sun would wash out the screen */
+        glow(p, Math.max(rPx * 34 * gk, 170), 'rgb(255,214,160)', clamp(0.06 + bright * 0.14, 0.06, 0.20));
+        glow(p, Math.max(rPx * 13 * gk, 70), 'rgb(255,230,185)', clamp(0.20 + bright * 0.40, 0.20, 0.60));
         glow(p, Math.max(rPx * 4.6, 26), 'rgb(255,248,228)', clamp(0.35 + bright * 0.50, 0.35, 0.85));
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rPx);
         g.addColorStop(0, '#ffffff');
-        g.addColorStop(0.55, '#fffaf0');
+        g.addColorStop(0.55, (deep.on && o.kind === 'sun') ? o.color : '#fffaf0');
         g.addColorStop(0.88, o.color);
         g.addColorStop(1, o.kind === 'sun' ? '#ffab3d' : o.color);
         ctx.fillStyle = g;
@@ -3059,7 +3108,7 @@ function telescopeFocus() {
 }
 
 function drawDeepFields() {
-  if (!opts.deepfields) return;
+  if (!opts.deepfields || deep.on) return;
   const focus = telescopeFocus();
   if (!focus) return;
   const fade = skyFade();
@@ -3331,6 +3380,7 @@ function lookAtDir(d, fovRad) {
   updateFocusChip();
   cam.yawGoal += dy;
   cam.pitchGoal = clamp(-Math.asin(clamp(d.z, -1, 1)), -1.45, 1.45);
+  cam.rollGoal = 0; cam.pendYaw = cam.pendPitch = 0;          /* a telescope looks with a level horizon */
   cam.fovGoal = clamp(fovRad || FOV_DEFAULT, FOV_MIN, FOV_DEFAULT);
   idle = 0;
 }
@@ -3566,7 +3616,7 @@ function drawDistant(o, p) {
 }
 
 function drawConstellationNames() {
-  if (!opts.constellations) return;
+  if (!opts.constellations || (deep.on && deep.Y > 5e4)) return;   /* the figures distort as the stars move */
   const fade = skyFade();
   if (fade <= 0.03) return;
   ctx.save();
@@ -3611,8 +3661,12 @@ canvas.addEventListener('pointermove', function (e) {
   movedPx += Math.abs(dx) + Math.abs(dy);
   lastX = e.clientX; lastY = e.clientY;
   const s = 0.005 * (cam.fov / FOV_DEFAULT);       /* a magnified sky pans slower */
-  cam.yawGoal -= dx * s;
-  cam.pitchGoal = clamp(cam.pitchGoal + dy * s, -1.52, 1.52);
+  if (opts.freeRotate && cam.fovGoal >= FOV_DEFAULT * 0.999) {
+    cam.pendYaw -= dx * s; cam.pendPitch += dy * s;       /* any direction, over the poles */
+  } else {
+    cam.yawGoal -= dx * s;
+    cam.pitchGoal = clamp(cam.pitchGoal + dy * s, -1.52, 1.52);   /* level horizon: stop just short of the poles */
+  }
 });
 canvas.addEventListener('pointerup', function (e) {
   dragging = false;
@@ -4634,6 +4688,7 @@ function goHome() {
   panelRoot.classList.remove('hidden');
   cam.gx = cam.gy = cam.gz = 0;
   cam.distGoal = 48; cam.pitchGoal = 0.42; cam.fovGoal = FOV_DEFAULT;
+  cam.rollGoal = 0; cam.pendYaw = cam.pendPitch = 0;
   updateFocusChip();
 }
 $('btnHome').addEventListener('click', goHome);
@@ -4649,7 +4704,7 @@ const optMap = { optOrbits: 'orbits', optLabels: 'labels', optMoons: 'moons', op
                  optRealSize: 'realSize', optConstellations: 'constellations', optDeepFields: 'deepfields', optNgc: 'ngc',
                  optMainBelt: 'mainbelt', optNeo: 'neo', optTrojans: 'trojans', optTno: 'tno', optComets: 'comets',
                  optGalaxies: 'galaxies', optSatellites: 'satellites',
-                 optAllStars: 'allStars', optAllGalaxies: 'allGalaxies', optAllSmall: 'allSmallBodies', optSurfaces: 'surfaces' };
+                 optAllStars: 'allStars', optAllGalaxies: 'allGalaxies', optAllSmall: 'allSmallBodies', optSurfaces: 'surfaces', optFreeRotate: 'freeRotate' };
 Object.keys(optMap).forEach(function (elId) {
   const el = $(elId);
   el.checked = opts[optMap[elId]];
@@ -4755,16 +4810,23 @@ function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
 
-  if (playing) simJd += (SPEEDS[speedIdx].v * dt) / 86400;
+  if (deep.on) deepTick(dt);
+  else if (playing) simJd += (SPEEDS[speedIdx].v * dt) / 86400;
 
   updatePositions(simJd);
+  if (deep.on) deepWorld();
 
   /* a slow cinematic drift until the viewer takes over */
   idle += dt;
-  if (idle > 6 && !dragging && !cam.flight && cam.follow === null) cam.yawGoal += dt * 0.012 * (cam.fov / FOV_DEFAULT);
+  if (idle > 6 && !dragging && !cam.flight && cam.follow === null && !deep.on) {
+    const drift = dt * 0.012 * (cam.fov / FOV_DEFAULT);
+    if (opts.freeRotate && cam.fovGoal >= FOV_DEFAULT * 0.999) cam.pendYaw += drift; else cam.yawGoal += drift;
+  }
 
+  if (deep.on && !deep.takeover) deepCamera(dt);
   updateCamera(dt);
   render(dt);
+  if (deep.on) { deepOverlay(); deepHud(); }
 
   if (route.open && statTick % 30 === 0) renderRoute();
   /* distances drift as the clock runs, so refresh them a few times a second */
@@ -4805,10 +4867,367 @@ updateHistoryButtons();
 requestAnimationFrame(frame);
 
 /* expose a little of the internals for tinkering from the console */
-window.OU = { objects: objects, byId: byId, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+
+/* ============================================================
+   Deep time — the future of the universe on a log clock
+   ============================================================ */
+const DEEP_SHOTS_FN = {};
+const deepStore = {};
+function fmtYears(Y) {
+  if (Y < 1e4) return Math.round(Y).toLocaleString() + (Math.round(Y) === 1 ? ' year' : ' years');
+  if (Y < 1e6) return Math.round(Y / 1e3).toLocaleString() + ' thousand years';
+  if (Y < 1e9) return (Y / 1e6).toFixed(Y < 1e7 ? 1 : 0) + ' million years';
+  if (Y < 1e12) return (Y / 1e9).toFixed(Y < 1e10 ? 2 : 0) + ' billion years';
+  if (Y < 1e15) return (Y / 1e12).toFixed(Y < 1e13 ? 1 : 0) + ' trillion years';
+  return null;                                        /* shown as a power of ten */
+}
+/* how long each catalogue star has left, from its colour and brightness */
+function massFromBV(bv) {
+  const T = [[-0.33, 20], [-0.2, 7], [-0.1, 4], [0, 2.5], [0.15, 1.9], [0.3, 1.5], [0.45, 1.25], [0.6, 1.05], [0.65, 1.0], [0.8, 0.9], [1.0, 0.78], [1.2, 0.68], [1.4, 0.6], [1.6, 0.45], [1.8, 0.3], [2.0, 0.18]];
+  if (bv <= T[0][0]) return T[0][1];
+  for (let i = 1; i < T.length; i++) if (bv <= T[i][0]) { const f = (bv - T[i - 1][0]) / (T[i][0] - T[i - 1][0]); return T[i - 1][1] + f * (T[i][1] - T[i - 1][1]); }
+  return 0.15;
+}
+function msLife(m) { return m >= 0.5 ? 1e10 * Math.pow(m, -2.5) : 5.7e10 * Math.pow(0.5 / m, 3.2); }
+function starLives() {
+  const S = bulkStars;
+  if (S.life) return S.life;
+  const L = new Float32Array(S.n);
+  for (let i = 0; i < S.n; i++) {
+    const dpc = Math.max(Math.hypot(S.x[i], S.y[i], S.z[i]) / PC_AU, 1e-3);
+    const M = S.mag[i] * 0.01 - 5 * Math.log10(dpc) + 5, bv = S.ci[i] * 0.001;
+    let life;
+    if (M < -4) life = 1e6;                                  /* supergiants */
+    else if (bv > 0.75 && M < 1.2) life = 3e8;               /* giants: already old */
+    else life = msLife(massFromBV(bv)) * 0.5;                /* on average half way through */
+    L[i] = life;
+  }
+  S.life = L;
+  return L;
+}
+function curatedLife(o) {
+  if (o.id === 'betelgeuse') return 1e5;
+  if (o.category === 'remnants') return 1e16;
+  const d = o.data || {}, r = d.rSun || 1, sp = (d.spec || 'G').charAt(0);
+  if (r > 300) return 3e5;
+  if (r > 50) return 2e6;
+  if (r > 10) return 3e8;
+  return ({ O: 5e6, B: 1e8, A: 1e9, F: 4e9, G: 6e9, K: 2e10, M: 1e12 }[sp] || 6e9);
+}
+function sunAt(Y) {
+  const T = SUN_TRACK;
+  if (Y >= T[T.length - 1][0]) return { r: T[T.length - 1][1], col: T[T.length - 1][2] };
+  for (let i = 1; i < T.length; i++) if (Y <= T[i][0]) {
+    const f = (Y - T[i - 1][0]) / (T[i][0] - T[i - 1][0]);
+    const r = Math.exp(lerp(Math.log(T[i - 1][1]), Math.log(T[i][1]), f));
+    const c0 = parseInt(T[i - 1][2].slice(1), 16), c1 = parseInt(T[i][2].slice(1), 16);
+    const ch = function (s) { return Math.round(lerp(c0 >> s & 255, c1 >> s & 255, f)); };
+    return { r: r, col: '#' + [ch(16), ch(8), ch(0)].map(function (v) { return v.toString(16).padStart(2, '0'); }).join('') };
+  }
+  return { r: 1, col: '#ffd977' };
+}
+function sunMaxRUpTo(Y) {
+  let m = sunAt(Y).r;
+  SUN_TRACK.forEach(function (k) { if (k[0] <= Y) m = Math.max(m, k[1]); });
+  return m;
+}
+/* planets, moons and comets that no longer exist or move too fast to see */
+function deepGone(o) {
+  const Y = deep.Y;
+  if (Y > 1e15 && (o.kind === 'planet' || o.kind === 'dwarf' || o.kind === 'moon' || o.kind === 'exoplanet')) return true;   /* flung away by passing stars */
+  const host = o.kind === 'moon' ? byId[o.parent] : o;
+  if (host && host.el && (host.kind === 'planet') && host.el.a * 215 < deep.sunMaxR * 1.02) return true;                    /* swallowed by the red giant */
+  return false;
+}
+function deepHidden(o) {
+  const Y = deep.Y;
+  if (o.kind === 'probe' || o.category === 'satellites') return true;
+  if (o.kind === 'planet' || o.kind === 'dwarf' || o.kind === 'moon' || o.kind === 'exoplanet') {
+    if (o.id === 'earth' && deep.shot === 'earth') return false;   /* the Earth chapter shows Earth itself */
+    return deepGone(o) || !!o.deepBlur;
+  }
+  if (o.kind === 'sun') return Y > 1e16;
+  if (o.kind === 'star') { if (o.deepLife == null) o.deepLife = curatedLife(o); return Y > o.deepLife; }
+  if (o.kind === 'blackhole') { if (o.deepEvap == null) o.deepEvap = 2.1e67 * Math.pow((o.data && o.data.massSuns) || 10, 3); return Y > o.deepEvap; }
+  if (o.kind === 'neutron') return Y > 1e16;
+  if (o.kind === 'deepsky') {
+    if (o.category === 'galaxies') { if (o.id === 'm31') return deep.merge > 0.9; return o.lg ? Y > 8e9 : deep.horizonFade < 0.4; }   /* the satellites end up inside Milkomeda */
+    return Y > 1e8;                                         /* nebulae disperse, clusters drift apart */
+  }
+  if (o.kind === 'distant') return deep.horizonFade < 0.4;
+  return false;
+}
+/* ---- the clock: ten times faster every second, pausing at each chapter ---- */
+function deepRate(L) {
+  const zones = [[7.0, 8.36, 0.3], [9.15, 9.65, 0.22], [9.74, 9.879, 0.07], [10.3, 11.18, 0.45],
+                 [20.5, 33.6, 3], [41, 66.5, 3.5], [68.5, 86.6, 3.5], [88, 99.8, 3.5]];
+  for (let i = 0; i < zones.length; i++) if (L >= zones[i][0] && L < zones[i][1]) return zones[i][2];
+  return 1;
+}
+function deepSetLog(L) {
+  deep.logY = clamp(L, 0, 100.3);
+  deep.Y = Math.pow(10, deep.logY);
+}
+function deepTick(dt) {
+  deep.clock += dt;
+  let rate = 0;
+  if (deep.playing) {
+    if (deep.hold > 0) { deep.hold -= dt; rate = 0.012; }
+    else rate = deepRate(deep.logY);
+    const next = DEEP_TIME[deep.chapter + 1];
+    let L = deep.logY + rate * dt;
+    if (deep.hold > 0 && next) L = Math.min(L, next.log - 1e-4);   /* the slow drift during a pause never reaches the next chapter */
+    if (next && L >= next.log) {                             /* arrive at a chapter and dwell on it */
+      L = next.log; deep.chapter++;
+      const words = next.text.split(' ').length + next.title.split(' ').length;
+      deep.hold = clamp(1.6 + words * 0.13, 3, 6.5);
+      deepShowChapter();
+    }
+    deepSetLog(L);
+    if (deep.chapter >= DEEP_TIME.length - 1 && deep.hold <= 0) { deep.playing = false; deepEnd(true); }
+  }
+  deep.yrsPerSec = deep.Y * Math.LN10 * rate;
+  /* the planets really move for the first thousand years; after that they are rings */
+  simJd = deep.jd0 + Math.min(deep.Y, 1000) * 365.25;
+}
+function deepWorld() {
+  const Y = deep.Y;
+  const yrsPerFrame = deep.yrsPerSec / 60;
+  objects.forEach(function (o) {
+    if (o.kind !== 'planet' && o.kind !== 'dwarf' && o.kind !== 'moon') return;
+    if (o.deepBlur) return;
+    const P = o.el ? Math.pow(o.el.a, 1.5) : (o.periodDays ? o.periodDays / 365.25 : 1e9);
+    if (yrsPerFrame > P / 6 || Y > 1000) o.deepBlur = true;   /* sticky: once a ring, stays a ring */
+  });
+  const s = sunAt(Y), sun = byId.sun;
+  sun.radiusAU = s.r * R_SUN_AU; sun.color = s.col;
+  deep.sunMaxR = sunMaxRUpTo(Y);
+  const e = byId.earth;
+  if (Y > 1e9) { e.dry = true; e.color = '#a8805c'; e.color2 = '#5a3c24'; }
+  else { e.dry = false; e.color = deepStore.earthColor; e.color2 = deepStore.earthColor2; }
+  deep.horizonFade = Y < 2e10 ? 1 : clamp(1 - (Math.log10(Y) - 10.3) / 0.88, 0, 1);
+  deep.galaxyFade = Y < 1e12 ? 1 : Y < 1e14 ? lerp(1, 0.15, (Math.log10(Y) - 12) / 2) : clamp(0.15 * (1 - (Math.log10(Y) - 14) / 6), 0, 0.15);
+  deep.merge = clamp((Y - 4.9e9) / 1.6e9, 0, 1);
+  /* Andromeda falls toward us */
+  const m31 = byId.m31;
+  if (m31 && MW) {
+    const s2 = clamp(1 - Math.pow(Y / 4.9e9, 2), 0, 1), c = MW.centre, p0 = deepStore.m31pos;   /* first close pass about 4.5 billion years out, merged by about 6.5 */
+    m31.pos = { x: c.x + (p0.x - c.x) * s2, y: c.y + (p0.y - c.y) * s2, z: c.z + (p0.z - c.z) * s2 };
+  }
+}
+/* ---- the guided camera ---- */
+function deepShot(name) {
+  const Y = deep.Y, t = deep.clock;
+  const ang = function (yaw, pitch) { return { yaw: yaw, pitch: pitch, roll: 0 }; };
+  if (name === 'solar') return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 48 }, ang(-1.05 + 0.04 * t, 0.5));
+  if (name === 'solarWide') return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 7.5 }, ang(-1.05 + 0.05 * t, 0.55));
+  if (name === 'earth') { const e = byId.earth; const v = sunlitAngles(e) || { yaw: 0, pitch: 0.3 }; return Object.assign({ pos: { x: e.pos.x, y: e.pos.y, z: e.pos.z }, dist: frameDistance(e.radiusAU, 0.3) }, ang(v.yaw, v.pitch)); }
+  if (name === 'orion') {
+    const b = byId.betelgeuse, bp = b ? b.pos : { x: 0, y: 1e7, z: 0 }, bd = norm(bp);
+    const side = norm(cross(bd, { x: 0, y: 0, z: 1 }));
+    const v = norm({ x: side.x * 0.8 + 0.35 * 0 - bd.x * 0.45, y: side.y * 0.8 - bd.y * 0.45, z: 0.4 });
+    const dist = Math.hypot(bp.x, bp.y, bp.z) * 1.15;
+    return Object.assign({ pos: { x: bp.x * 0.45, y: bp.y * 0.45, z: bp.z * 0.45 }, dist: dist }, ang(Math.atan2(v.y, v.x) + 0.02 * t, Math.asin(clamp(v.z, -1, 1))));
+  }
+  if (name === 'galaxy') {
+    const v = MW.obj.view, F = camFrame(v.yaw, v.pitch, 0);
+    const th = TAU * Math.min(Y, 2.3e8) / 2.3e8 + 0.015 * t;  /* the camera circles the galaxy's axis, so the galaxy appears to turn */
+    const d = rotateAbout(F.d, MW.ez, th), u = rotateAbout(F.up, MW.ez, th);
+    const e = camAngles(d, u, v.yaw);
+    return { pos: { x: MW.centre.x, y: MW.centre.y, z: MW.centre.z }, dist: objectViewDistance(MW.obj) * 1.1, yaw: e.yaw, pitch: e.pitch, roll: e.roll };
+  }
+  if (name === 'lg') {
+    const c = MW.centre, m = byId.m31.pos, sep = Math.hypot(m.x - c.x, m.y - c.y, m.z - c.z);
+    const v = byId.localgroup ? byId.localgroup.view : { yaw: 0, pitch: 0.5 };
+    return Object.assign({ pos: { x: (c.x + m.x) / 2, y: (c.y + m.y) / 2, z: (c.z + m.z) / 2 }, dist: Math.max(sep * 1.25, 3.2e5 * LY_AU) }, ang(v.yaw + 0.02 * t, v.pitch));
+  }
+  if (name === 'cosmos') return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 6e8 * LY_AU }, ang(0.4 + 0.02 * t, 0.45));
+  if (name === 'bh') { const b = byId.sgrA; return Object.assign({ pos: { x: b.pos.x, y: b.pos.y, z: b.pos.z }, dist: objectViewDistance(b) * 1.4 }, ang(0.3 + 0.05 * t, 0.25)); }
+  return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 48 }, ang(-1.05, 0.42));
+}
+function deepShotName() {
+  const L = deep.logY;
+  if (L < 4.3) return 'solar';
+  if (L < 6.6) return 'orion';
+  if (L < 8.6) return 'galaxy';
+  if (L < 9.15) return 'earth';
+  if (L < 9.7) return 'lg';
+  if (L < 10.3) return 'solarWide';
+  if (L < 11.6) return 'cosmos';
+  if (L < 30) return 'galaxy';
+  return 'bh';
+}
+function deepCamera(dt) {
+  const name = deepShotName();
+  if (name !== deep.shot) {                                  /* start a smooth move from wherever the camera is */
+    deep.shot = name; deep.blend = 0;
+    deep.from = { pos: { x: cam.tx, y: cam.ty, z: cam.tz }, dist: cam.dist, yaw: cam.yaw, pitch: cam.pitch, roll: cam.roll };
+  }
+  const B = deepShot(name);
+  let S = B;
+  if (deep.blend < 1) {
+    deep.blend = Math.min(1, deep.blend + dt / 2.2);
+    const e = deep.blend < 0.5 ? 4 * deep.blend * deep.blend * deep.blend : 1 - Math.pow(-2 * deep.blend + 2, 3) / 2;
+    const A = deep.from;
+    const la = Math.log(A.dist), lb = Math.log(B.dist), d = Math.exp(lerp(la, lb, e));
+    const sep = Math.hypot(B.pos.x - A.pos.x, B.pos.y - A.pos.y, B.pos.z - A.pos.z);
+    let w = e;
+    if (sep > 0) { const d0 = Math.max(A.dist, 0.3 * sep); if (B.dist > d0) w = clamp((Math.log(d) - Math.log(d0)) / (lb - Math.log(d0)), 0, 1); else if (A.dist > B.dist) w = clamp(1 - (Math.log(d) - Math.log(Math.max(B.dist, 0.3 * sep))) / (la - Math.log(Math.max(B.dist, 0.3 * sep)) || 1), 0, 1); }
+    w = w * w * (3 - 2 * w);
+    let dy = B.yaw - A.yaw; dy -= TAU * Math.round(dy / TAU);
+    let dr = B.roll - A.roll; dr -= TAU * Math.round(dr / TAU);
+    S = { pos: { x: lerp(A.pos.x, B.pos.x, w), y: lerp(A.pos.y, B.pos.y, w), z: lerp(A.pos.z, B.pos.z, w) }, dist: d,
+          yaw: A.yaw + dy * e, pitch: lerp(A.pitch, B.pitch, e), roll: A.roll + dr * e };
+  }
+  cam.follow = null; cam.flight = null;
+  cam.gx = cam.tx = S.pos.x; cam.gy = cam.ty = S.pos.y; cam.gz = cam.tz = S.pos.z;
+  cam.dist = cam.distGoal = S.dist;
+  cam.yaw = cam.yawGoal = S.yaw; cam.pitch = cam.pitchGoal = S.pitch; cam.roll = cam.rollGoal = S.roll;
+  cam.pendYaw = cam.pendPitch = 0;
+  cam.fov = cam.fovGoal = FOV_DEFAULT;
+}
+/* ---- what the renderer cannot show by itself ---- */
+function deepOverlay() {
+  const L = deep.logY;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  /* Betelgeuse's supernova */
+  const bet = byId.betelgeuse;
+  if (bet && L >= 4.995 && L < 5.45) {
+    const q = project(bet.pos);
+    if (q) { const f = 1 - (L - 4.995) / 0.455; glow(q, 30 + 160 * f, 'rgb(220,235,255)', 0.9 * f); glow(q, 10 + 40 * f, 'rgb(255,255,255)', f); }
+  }
+  /* the Sun's planetary nebula */
+  if (deep.Y > 7.72e9 && deep.Y < 8.8e9) {
+    const q = project({ x: 0, y: 0, z: 0 });
+    if (q) {
+      const f = (deep.Y - 7.72e9) / 1.08e9, rAU = 1.5 + 9 * Math.sqrt(f), rp = (rAU / q.z) * focal, al = 0.55 * (1 - f);
+      const g = ctx.createRadialGradient(q.x, q.y, rp * 0.6, q.x, q.y, rp);
+      g.addColorStop(0, 'rgba(90,200,210,0)'); g.addColorStop(0.75, 'rgba(90,200,210,' + (al * 0.6).toFixed(3) + ')');
+      g.addColorStop(0.93, 'rgba(255,120,150,' + al.toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,120,150,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x, q.y, rp, 0, TAU); ctx.fill();
+    }
+  }
+  /* Milkomeda: the merged galaxy settles into a smooth elliptical glow */
+  if (deep.merge > 0 && MW && deep.galaxyFade > 0.01) {
+    const q = project(MW.centre);
+    if (q) {
+      const dC = Math.hypot(MW.centre.x - camPos.x, MW.centre.y - camPos.y, MW.centre.z - camPos.z);
+      const rp = (MW.radius * 1.15 / dC) * focal, al = 0.42 * deep.merge * deep.galaxyFade;
+      if (rp > 3) {
+        const g = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, rp);
+        g.addColorStop(0, 'rgba(255,236,205,' + al.toFixed(3) + ')'); g.addColorStop(0.25, 'rgba(255,214,170,' + (al * 0.5).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,200,160,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(q.x, q.y, rp, rp * 0.72, 0.4, 0, TAU); ctx.fill();
+        if (deep.merge > 0.6 && deep.Y < 1e19) {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; ctx.textAlign = 'center';
+          ctx.fillStyle = 'rgba(255,225,190,' + (0.8 * Math.min(1, deep.galaxyFade * 2)).toFixed(2) + ')';
+          ctx.fillText('Milkomeda', q.x, q.y - rp * 0.78 - 8);
+          ctx.globalCompositeOperation = 'lighter';
+        }
+      }
+    }
+  }
+  /* Sagittarius A* evaporates in a last flash */
+  const s = byId.sgrA;
+  if (s && L >= 87.2 && L < 87.7) {
+    const q = project(s.pos);
+    if (q) { const f = 1 - (L - 87.2) / 0.5; glow(q, 40 + 260 * f, 'rgb(255,240,220)', f); }
+  }
+  ctx.restore();
+}
+/* ---- the readout ---- */
+const DEEP_TAGS = { calc: 'Calculated', pred: 'Predicted', spec: 'Speculative' };
+function deepHud() {
+  const Y = deep.Y, t = fmtYears(Y);
+  $('deepWhen').innerHTML = '+' + (t ? esc(t) : '10<sup>' + Math.floor(deep.logY) + '</sup> years');
+  const yr = Math.round(deep.year0 + Y);
+  $('deepSub').textContent = Y < 1e6 ? 'Year ' + (yr < 10000 ? String(yr) : yr.toLocaleString()) : 'from today';
+  const r = deep.yrsPerSec;
+  $('deepRate').textContent = !deep.playing ? 'Paused' : deep.hold > 0 ? 'Slowing for a moment' :
+    'Time now passes at ' + (r < 1e15 && fmtYears(r) ? fmtYears(r) : '10^' + Math.floor(Math.log10(Math.max(r, 1))) + ' years') + ' per second';
+  if (!deep.dragSlider) $('deepSlider').value = Math.round(deep.logY * 10);
+  $('deepPlay').classList.toggle('on', deep.playing);
+  $('deepPlayIcon').classList.toggle('hidden', deep.playing); $('deepPauseIcon').classList.toggle('hidden', !deep.playing);
+  $('deepGuide').classList.toggle('hidden', !deep.takeover);
+}
+function deepShowChapter() {
+  const c = DEEP_TIME[deep.chapter];
+  const card = $('deepCard');
+  if (!c) { card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  $('deepTag').textContent = DEEP_TAGS[c.tag]; $('deepTag').className = 'deep-tag ' + c.tag;
+  $('deepTitle').textContent = c.title; $('deepText').textContent = c.text;
+  card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
+}
+function deepChapterFor(L) { let k = -1; for (let i = 0; i < DEEP_TIME.length; i++) if (DEEP_TIME[i].log <= L + 1e-9) k = i; return k; }
+function deepEnd(show) { $('deepEnd').classList.toggle('hidden', !show); }
+/* ---- in and out ---- */
+function deepStart() {
+  if (deep.on) return;
+  closeRoute(); closeCompare(); select(null);
+  deepStore.panelOpen = !panel.classList.contains('hidden');
+  deepStore.playing = playing; deepStore.simJd = simJd;
+  deepStore.sun = { r: byId.sun.radiusAU, col: byId.sun.color };
+  deepStore.earthColor = byId.earth.color; deepStore.earthColor2 = byId.earth.color2;
+  deepStore.m31pos = { x: byId.m31.pos.x, y: byId.m31.pos.y, z: byId.m31.pos.z };
+  panel.classList.add('hidden'); $('reopenBtn').classList.remove('show');
+  $('timeBar').classList.add('hidden'); $('deepHud').classList.remove('hidden'); $('deepBar').classList.remove('hidden');
+  deep.on = true; deep.jd0 = simJd; deep.year0 = dateFromJd(simJd).getUTCFullYear() + dateFromJd(simJd).getUTCMonth() / 12;
+  deepRestart();
+}
+function deepRestart() {
+  objects.forEach(function (o) { o.deepBlur = false; });
+  deepSetLog(0); deep.chapter = -1; deep.hold = 0; deep.playing = true; deep.takeover = false; deep.shot = null; deep.clock = 0;
+  deepEnd(false); $('deepCard').classList.add('hidden');
+}
+function deepStop() {
+  if (!deep.on) return;
+  deep.on = false;
+  objects.forEach(function (o) { o.deepBlur = false; });
+  byId.sun.radiusAU = deepStore.sun.r; byId.sun.color = deepStore.sun.col;
+  byId.earth.dry = false; byId.earth.color = deepStore.earthColor; byId.earth.color2 = deepStore.earthColor2;
+  byId.m31.pos = deepStore.m31pos;
+  simJd = deepStore.simJd; playing = deepStore.playing; updatePlayIcon();
+  $('timeBar').classList.remove('hidden'); $('deepHud').classList.add('hidden'); $('deepBar').classList.add('hidden'); deepEnd(false);
+  cam.rollGoal = 0;
+  if (deepStore.panelOpen) panel.classList.remove('hidden');
+  goHome();
+}
+$('btnDeepTime').addEventListener('click', deepStart);
+$('deepExit').addEventListener('click', deepStop);
+$('deepEndExit').addEventListener('click', deepStop);
+$('deepAgain').addEventListener('click', deepRestart);
+$('deepPlay').addEventListener('click', function () {
+  if (deep.logY >= 100.29) { deepRestart(); return; }
+  deep.playing = !deep.playing; if (deep.playing) deepEnd(false);
+});
+$('deepGuide').addEventListener('click', function () { deep.takeover = false; deep.shot = null; });
+const deepSlider = $('deepSlider');
+deepSlider.addEventListener('input', function () {
+  deep.dragSlider = true;
+  const L = deepSlider.value / 10;
+  objects.forEach(function (o) { o.deepBlur = false; });
+  deepSetLog(L); deep.hold = 0; deep.chapter = deepChapterFor(L); deepShowChapter(); deepEnd(false);
+});
+deepSlider.addEventListener('change', function () { deep.dragSlider = false; });
+/* chapter ticks along the slider */
+(function () {
+  const box = $('deepTicks');
+  DEEP_TIME.forEach(function (c) {
+    const t = document.createElement('span'); t.className = 'deep-tick'; t.style.left = (Math.min(c.log, 100) / 100.3 * 100) + '%'; t.title = c.title;
+    box.appendChild(t);
+  });
+})();
+/* dragging during deep time hands the camera to the viewer; time keeps running */
+canvas.addEventListener('pointerdown', function () { if (deep.on) deep.takeover = true; });
+canvas.addEventListener('wheel', function () { if (deep.on) deep.takeover = true; });
+
+window.OU = { objects: objects, byId: byId, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
-              step: function (dt) { dt = dt || 0.016; updatePositions(simJd); updateCamera(dt); render(dt); },
+              step: function (dt, noDraw) { dt = dt || 0.016; if (deep.on) deepTick(dt); updatePositions(simJd); if (deep.on) deepWorld(); if (deep.on && !deep.takeover) deepCamera(dt); updateCamera(dt); if (!noDraw) { render(dt); if (deep.on) { deepOverlay(); deepHud(); } } },
               get jd() { return simJd; }, set jd(v) { simJd = v; } };
 
 })();

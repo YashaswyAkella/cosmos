@@ -460,3 +460,30 @@ button, input { font-family: inherit; }
 
 /* narrow windows: keep the right-hand tools reachable */
 @media (max-width: 760px) { #btnHome, #btnBack, #btnForward { display: none; } .search-input { width: 150px; } }
+
+/* ---------- deep time ---------- */
+.deep-launch { margin-left: 4px; background: var(--accent-soft); border-color: rgba(124,140,255,0.4); color: #c3caff; }
+.deep-hud { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); z-index: 22; text-align: center; pointer-events: none; width: min(560px, 92%); }
+.deep-when { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; color: #fafafa; text-shadow: 0 2px 24px rgba(0,0,0,0.8); line-height: 1.05; }
+.deep-when sup { font-size: 0.55em; }
+.deep-sub { font-size: 13px; color: var(--muted); margin-top: 4px; text-shadow: 0 1px 8px rgba(0,0,0,0.9); }
+.deep-card { margin: 14px auto 0; padding: 12px 16px 13px; max-width: 460px; text-align: left; background: rgba(16,16,22,0.82); border: 1px solid var(--card-border); border-radius: 14px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.deep-card.pop { animation: deepPop .5s ease; }
+@keyframes deepPop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.deep-card h3 { margin: 6px 0 4px; font-size: 17px; font-weight: 650; }
+.deep-card p { margin: 0; font-size: 13px; line-height: 1.5; color: #d6d6e0; }
+.deep-tag { display: inline-block; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.deep-tag.calc { background: rgba(110,220,150,0.16); color: #8ee6aa; }
+.deep-tag.pred { background: rgba(124,140,255,0.18); color: #b4bdff; }
+.deep-tag.spec { background: rgba(255,190,100,0.16); color: #ffc98a; }
+.deep-bar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 22; display: flex; align-items: center; gap: 10px; width: min(820px, calc(100% - 36px));
+  background: rgba(16,16,22,0.86); border: 1px solid var(--card-border); border-radius: 14px; padding: 8px 12px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.deep-track { position: relative; flex: 1; min-width: 120px; }
+.deep-track input { width: 100%; accent-color: var(--accent); }
+.deep-ticks { position: absolute; left: 7px; right: 7px; top: -3px; height: 6px; pointer-events: none; }
+.deep-tick { position: absolute; top: 0; width: 2px; height: 6px; margin-left: -1px; border-radius: 1px; background: rgba(180,190,255,0.55); }
+.deep-rate { font-size: 11.5px; color: var(--muted); min-width: 190px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.deep-end { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 23; text-align: center; background: rgba(16,16,22,0.9); border: 1px solid var(--card-border); border-radius: 14px; padding: 12px 16px; }
+.deep-end p { margin: 0 0 10px; font-size: 13px; color: #d6d6e0; }
+.deep-end div { display: flex; gap: 8px; justify-content: center; }
+@media (max-width: 700px) { .deep-rate { display: none; } .deep-when { font-size: 32px; } }

@@ -141,6 +141,7 @@
       <label class="switch"><input type="checkbox" id="optMilkyWay" checked><span>Milky Way glow</span></label>
       <label class="switch"><input type="checkbox" id="optProbes" checked><span>Spacecraft</span></label>
       <label class="switch"><input type="checkbox" id="optSurfaces"><span>Realistic surfaces — maps, cloud bands, ring shadows</span></label>
+      <label class="switch"><input type="checkbox" id="optFreeRotate"><span>Free rotation — turn in any direction, over the poles</span></label>
       <label class="switch"><input type="checkbox" id="optRealSize"><span>Genuine sizes only (no marker dots for distant bodies)</span></label>
       <div class="seg-row"><span>Structures</span><div class="seg" id="segStructures"><button data-v="shells">Shells</button><button data-v="outlines">Outlines</button><button data-v="off">Off</button></div></div>
       <div class="popover-title" style="margin-top:10px">More objects</div>
@@ -198,6 +199,28 @@
       <div class="time-date" id="timeDate">—</div>
       <div class="time-speeds" id="timeSpeeds"></div>
       <button class="btn tiny" id="btnNow">Now</button>
+      <button class="btn tiny deep-launch" id="btnDeepTime" title="Watch the future of the universe">Deep time ⏩</button>
+    </div>
+
+    <!-- Deep time -->
+    <div class="deep-hud hidden" id="deepHud">
+      <div class="deep-when" id="deepWhen">+1 year</div>
+      <div class="deep-sub" id="deepSub">from today</div>
+      <div class="deep-card hidden" id="deepCard"><span class="deep-tag" id="deepTag">Calculated</span><h3 id="deepTitle"></h3><p id="deepText"></p></div>
+    </div>
+    <div class="deep-bar hidden" id="deepBar">
+      <button class="icon-btn small" id="deepPlay" title="Play / pause">
+        <svg id="deepPlayIcon" class="hidden" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><polygon points="7 4 20 12 7 20"/></svg>
+        <svg id="deepPauseIcon" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="7" y="4.5" width="3.6" height="15"/><rect x="13.4" y="4.5" width="3.6" height="15"/></svg>
+      </button>
+      <div class="deep-track"><div class="deep-ticks" id="deepTicks"></div><input type="range" id="deepSlider" min="0" max="1003" step="1" value="0"></div>
+      <div class="deep-rate" id="deepRate"></div>
+      <button class="btn tiny hidden" id="deepGuide">Guided view</button>
+      <button class="btn tiny" id="deepExit">Back to today</button>
+    </div>
+    <div class="deep-end hidden" id="deepEnd">
+      <p>That is the future as far as physics can see.</p>
+      <div><button class="btn tiny" id="deepAgain">Watch again</button><button class="btn primary tiny" id="deepEndExit">Back to today</button></div>
     </div>
 
     <div class="focus-chip hidden" id="focusChip">

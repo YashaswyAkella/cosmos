@@ -10,6 +10,7 @@ A hand-built 3D map of the cosmos that runs in the browser with no libraries, no
 - 109,000 stars, 105,000 galaxies with distances, 66,000 asteroids and comets, 16,500 satellites, 6,200 exoplanets and 3,600 nebulae and clusters, all searchable.
 - Telescope views: select Hubble, Webb, Chandra or Kepler to see the patches of sky they stared at, and zoom in to their real size.
 - A trip planner: pick any two places and see the distance and how long the journey takes at the speed of Apollo 11, Voyager, light and more, plus the next real launch window.
+- Deep time: press "Deep time ⏩" in the time bar and watch the future of the universe, with time running ten times faster every second — the planets blurring into rings, Betelgeuse exploding, Andromeda colliding with the Milky Way, the Sun becoming a red giant and then a white dwarf, the sky emptying, the last stars going out, and the black holes evaporating, out to 10^100 years. Every step is tagged as calculated, predicted or speculative.
 - A size comparison: put any two things side by side to scale, from the Moon to the Milky Way.
 - Real phases and rotation: every world shows its true day and night side for the simulated time, the Moon keeps its real phase, and Settings → Realistic surfaces adds Earth's continents, Jupiter's belts and the Great Red Spot, Saturn's ring divisions and shadows, the Moon's maria and Mars's dark regions, all drawn from real geography.
 - The Milky Way itself: search for it and fly out to see the whole barred spiral from outside, with the Sun marked in the Local Arm, then keep zooming to see Andromeda beside it.
@@ -19,11 +20,12 @@ A hand-built 3D map of the cosmos that runs in the browser with no libraries, no
 
 ## Feedback wanted
 
-This is a beta. It works best on a laptop or desktop; the phone layout is not finished yet. Please open an issue for anything confusing, wrong or slow, or for what you would like to see. Screenshots help.
+This is a beta. It works best on a laptop or desktop; the phone layout is not finished yet.
+
 
 ## Controls
 
-Drag to orbit, scroll to zoom, click to select, double-click to fly. Search at the top. The time bar at the bottom runs the clock.
+Drag to orbit, scroll to zoom, click to select, double-click to fly. Search at the top. The time bar at the bottom runs the clock. The horizon stays level by default; switch on Free rotation in Settings to turn in any direction, including over the poles.
 
 ## Data credits
 
