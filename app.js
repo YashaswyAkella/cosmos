@@ -830,6 +830,10 @@ function drawRegions() {
     const sel = selectedId === o.id;
     let al = clamp((sr - 7) / 25, 0, 1);
     if (sr > 1.5 * maxWH) al *= clamp((4 * maxWH - sr) / (2.5 * maxWH), 0, 1);
+    /* a far structure belongs to the big picture: it only appears once the camera has pulled
+       back to a good fraction of its distance, instead of hanging in the sky like a nearby object */
+    const dC = Math.hypot(g.centre.x, g.centre.y, g.centre.z);
+    if (dC > 0 && !sel) al *= clamp((camR / dC - 0.3) / 0.3, 0, 1);
     if (al <= 0.01) continue;
     const rgb = hexA(g.col, 1).replace('rgba(', '').replace(',1)', '');
     if (opts.structures === 'off' && !sel) continue;
