@@ -192,6 +192,7 @@
 
     <!-- Time bar -->
     <div class="time-bar" id="timeBar">
+      <button class="btn tiny deep-launch" id="btnDeepPast" title="Rewind to the beginning of the universe">⏪ Deep past</button>
       <button class="icon-btn small" id="btnPlay" title="Play / pause">
         <svg id="iconPlay" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" class="hidden"><polygon points="7 4 20 12 7 20"/></svg>
         <svg id="iconPause" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="7" y="4.5" width="3.6" height="15"/><rect x="13.4" y="4.5" width="3.6" height="15"/></svg>
@@ -213,13 +214,15 @@
         <svg id="deepPlayIcon" class="hidden" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><polygon points="7 4 20 12 7 20"/></svg>
         <svg id="deepPauseIcon" viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><rect x="7" y="4.5" width="3.6" height="15"/><rect x="13.4" y="4.5" width="3.6" height="15"/></svg>
       </button>
-      <div class="deep-track"><div class="deep-ticks" id="deepTicks"></div><input type="range" id="deepSlider" min="0" max="1003" step="1" value="0"></div>
+      <button class="icon-btn small" id="deepBack" title="Run time backward">⏪</button>
+      <button class="icon-btn small" id="deepFwd" title="Run time forward">⏩</button>
+      <div class="deep-track"><div class="deep-ticks" id="deepTicks"></div><span class="deep-now" id="deepNowLabel">today</span><span class="deep-edge left">Big Bang</span><span class="deep-edge right">10¹⁰⁰ yr</span><input type="range" id="deepSlider" min="-622" max="1003" step="1" value="0"></div>
       <div class="deep-rate" id="deepRate"></div>
       <button class="btn tiny hidden" id="deepGuide">Guided view</button>
       <button class="btn tiny" id="deepExit">Back to today</button>
     </div>
     <div class="deep-end hidden" id="deepEnd">
-      <p>That is the future as far as physics can see.</p>
+      <p id="deepEndText">That is the future as far as physics can see.</p>
       <div><button class="btn tiny" id="deepAgain">Watch again</button><button class="btn primary tiny" id="deepEndExit">Back to today</button></div>
     </div>
 
@@ -250,7 +253,7 @@
       </button>
       <h2>Compare sizes</h2>
       <div class="route-row"><label>This</label><div class="picker"><input id="compareA" type="text" autocomplete="off" placeholder="Earth"><div class="picker-list" id="compareAList"></div></div></div>
-      <div class="route-row"><label>With</label><div class="picker"><input id="compareB" type="text" autocomplete="off" placeholder="Search anything with a size…"><div class="picker-list" id="compareBList"></div></div></div>
+      <div class="route-row"><label>With</label><div class="picker"><input id="compareB" type="text" autocomplete="off" placeholder="Search anything…"><div class="picker-list" id="compareBList"></div></div></div>
       <div class="compare-quick" id="compareQuick">
         <button class="btn tiny" id="compareSwap">Swap</button>
         <button class="btn tiny" data-id="moon">Moon</button><button class="btn tiny" data-id="earth">Earth</button><button class="btn tiny" data-id="jupiter">Jupiter</button>

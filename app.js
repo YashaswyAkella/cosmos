@@ -221,6 +221,8 @@ STARS.forEach(function (s) {
     absMag: s.mag - 5 * Math.log10(s.d / PC_LY) + 5, appMag: s.mag,
     fixed: v, data: s, prio: 40 - s.mag, minPx: 1.2
   });
+  if (s.sizeNote) o.sizeApprox = s.sizeNote;              /* a radius worked out from other measurements, not measured directly */
+  if (s.sizeWhat) o.sizeWhat = s.sizeWhat;                /* which body of a pair the size belongs to */
   o.pos = { x: v.x, y: v.y, z: v.z };
 });
 
@@ -230,7 +232,7 @@ EXOTIC.forEach(function (b) {
   const v = raDecToVec(b.ra, b.dec, distAU);
   const o = addObject({
     id: b.id, name: b.name, type: b.type, kind: 'blackhole', category: 'blackholes',
-    color: b.color, radiusAU: (b.shadowKm / 2) / AU_KM, fixed: v, data: b, prio: 95, minPx: 2
+    color: b.color, radiusAU: (b.massSuns ? 2.953 * b.massSuns : b.shadowKm / 2) / AU_KM, fixed: v, data: b, prio: 95, minPx: 2   /* event horizon: 2.953 km of radius per solar mass */
   });
   o.pos = { x: v.x, y: v.y, z: v.z };
 });
@@ -261,6 +263,7 @@ if (typeof REMNANTS !== 'undefined') REMNANTS.forEach(function (r) {
       absMag: am, appMag: am - 5 * Math.log10(r.d / PC_LY) + 5,
       fixed: v, data: r, prio: 44, minPx: 1.4
     });
+    if (r.sizeApprox) o.sizeApprox = r.sizeApprox;
     o.pos = o.fixed;
     r.stats = Object.assign({ 'Distance from Sun': fmtLy(r.d) }, r.stats || {});
     return;
@@ -505,8 +508,8 @@ const MW = (function () {
   /* arms: r = r0 · exp(k·θ), θ counter-clockwise from the Sun's azimuth (radians) */
   const ARMS = [
     { name: 'Scutum-Centaurus', r0: 4.5,  k: Math.tan(12 * DEG), t0: -30 * DEG,  t1: 370 * DEG, w: 0.40, amp: 1.0,  hot: 0.55, n: 1900 },
-    { name: 'Perseus',          r0: 9.9,  k: Math.tan(10 * DEG), t0: -210 * DEG, t1: 150 * DEG, w: 0.42, amp: 1.0,  hot: 0.55, n: 1900 },
-    { name: 'Sagittarius-Carina', r0: 6.4, k: Math.tan(12 * DEG), t0: -120 * DEG, t1: 220 * DEG, w: 0.30, amp: 0.7, hot: 0.45, n: 1200 },
+    { name: 'Perseus',          r0: 10.15, k: Math.tan(10 * DEG), t0: -210 * DEG, t1: 150 * DEG, w: 0.42, amp: 1.0,  hot: 0.55, n: 1900 },
+    { name: 'Sagittarius-Carina', r0: 6.72, k: Math.tan(12 * DEG), t0: -120 * DEG, t1: 220 * DEG, w: 0.30, amp: 0.7, hot: 0.45, n: 1200 },
     { name: 'Norma-Outer',      r0: 12.7, k: Math.tan(12 * DEG), t0: -300 * DEG, t1: 40 * DEG,  w: 0.30, amp: 0.55, hot: 0.40, n: 900 },
     { name: 'Local (Orion)',    r0: 8.35, k: Math.tan(11 * DEG), t0: -28 * DEG,  t1: 42 * DEG,  w: 0.20, amp: 0.45, hot: 0.50, n: 380, spur: true }
   ];
@@ -819,7 +822,7 @@ function drawRegions() {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (let i = 0; i < STRUCT.regions.length; i++) {
     const g = STRUCT.regions[i], o = g.obj;
-    if (deep.on && ((deep.shot !== 'cosmos' && deep.shot !== 'lg') || (o.id !== 'localgroup' && o.id !== 'observable' && deep.horizonFade < 0.5))) continue;
+    if (deep.on && ((deep.shot !== 'cosmos' && deep.shot !== 'lg') || (o.id !== 'localgroup' && o.id !== 'observable' && (deep.x < 0 ? deep.horizonFade < 0.5 : horizonDim(o) < 0.3)))) continue;
     const dx = g.centre.x - camPos.x, dy = g.centre.y - camPos.y, dz = g.centre.z - camPos.z;
     const dist = Math.hypot(dx, dy, dz);
     if (g.path) { drawWall(g, dist); continue; }
@@ -1172,7 +1175,15 @@ function bulkSbdbObject(k) {
   const L0 = mDeg + varpi - nDeg * (S.epoch - J2000);
   const aAU = S.a[k], e = S.e[k];
   const isComet = c >= 4;
-  const diamKm = S.diam[k] ? S.diam[k] / 10 : 1329 / Math.sqrt(0.15) * Math.pow(10, -S.H[k] / 500);
+  /* a comet's catalogue magnitude describes its glowing coma, not the nucleus, so without a published diameter its size is unknown */
+  /* (the same goes for the few distant bodies whose brightness is only a placeholder in the catalogue) */
+  const noSize = !S.diam[k] && (isComet || (c === 3 && S.H[k] === 2000));
+  /* otherwise a size follows from brightness once a reflectivity is assumed: 15% for ordinary asteroids, 7% for Jupiter's
+     Trojans and 8% for the distant icy bodies, which are darker. Tested on the bodies with measured sizes: good to a factor of about two. */
+  const albedo = c === 2 ? 0.07 : c === 3 ? 0.08 : 0.15;
+  const known = (typeof SBDB_DIAM_KM !== 'undefined') ? SBDB_DIAM_KM[name] : 0;       /* measured sizes the JPL table does not carry */
+  const diamKm = known ? known : S.diam[k] ? S.diam[k] / 10 : noSize ? 1 : 1329 / Math.sqrt(albedo) * Math.pow(10, -S.H[k] / 500);
+  const measured = !!(known || S.diam[k]);
   const periodYr = Math.pow(aAU, 1.5);
   /* asteroids and comets are often named after the same person (2688 Halley vs 1P/Halley),
      so only take a featured description when the class agrees with the list it came from */
@@ -1185,7 +1196,7 @@ function bulkSbdbObject(k) {
     el: { a: aAU, e: e, i: iDeg, L: L0, w: varpi, O: omDeg, aD: 0, eD: 0, iD: 0, LD: nDeg * 36525, wD: 0, OD: 0 },
     pole: { x: 0, y: 0, z: 1 }, prio: 58, minPx: 1.8,
     data: {
-      desc: famous || ('From the JPL Small-Body Database. ' + cls.label + (S.diam[k] ? '' : '; size estimated from brightness') + '.'),
+      desc: famous || ('From the JPL Small-Body Database. ' + cls.label + (measured ? '' : noSize ? (isComet ? '; the JPL database gives no size for its nucleus' : '; the JPL database gives no size for it') : '; size estimated from brightness') + '.'),
       stats: {
         'Class': cls.label,
         'Semi-major axis': aAU.toFixed(3) + ' AU',
@@ -1193,11 +1204,14 @@ function bulkSbdbObject(k) {
         'Inclination': iDeg.toFixed(1) + '°',
         'Perihelion': (aAU * (1 - e)).toFixed(3) + ' AU',
         'Orbital period': periodYr < 2 ? (periodYr * 365.25).toFixed(0) + ' days' : periodYr.toFixed(1) + ' years',
-        'Diameter': S.diam[k] ? diamKm.toFixed(1) + ' km' : '≈' + diamKm.toFixed(1) + ' km (from H)',
-        'Absolute magnitude H': (S.H[k] / 100).toFixed(1)
+        'Diameter': measured ? ((known && typeof SBDB_DIAM_NOTE !== 'undefined' && SBDB_DIAM_NOTE[name]) ? '≈' + Math.round(diamKm).toLocaleString() + ' km (' + SBDB_DIAM_NOTE[name] + ')' : (diamKm >= 100 ? Math.round(diamKm).toLocaleString() : diamKm.toFixed(1)) + ' km') : noSize ? 'Not in the JPL database' : '≈' + fmtSize(diamKm / AU_KM, true) + ' (from brightness, if it reflects ' + Math.round(albedo * 100) + '% of sunlight)',
+        'Absolute magnitude H': (isComet || (noSize && !isComet)) ? '—' : (S.H[k] / 100).toFixed(1)
       }
     }
   });
+  if (noSize) o.sizeUnknown = 'The JPL database gives no measured size for ' + (isComet ? 'the nucleus of ' : '') + name + (isComet ? ', and a comet\'s brightness comes from its glowing coma, not the nucleus' : '') + ', so no size is shown.';
+  else if (known && typeof SBDB_DIAM_NOTE !== 'undefined' && SBDB_DIAM_NOTE[name]) o.sizeApprox = SBDB_DIAM_NOTE[name];
+  else if (!measured) o.sizeApprox = 'estimated from its brightness, assuming it reflects ' + Math.round(albedo * 100) + '% of sunlight; the true size could be half or double';
   return o;
 }
 
@@ -1234,7 +1248,7 @@ function galType(t) {
    position angle of the few galaxies large enough to draw as ellipses */
 const NORTH_ECL = eqToEcl(0, 0, 1);
 function drawBulkGalaxies() {
-  const G = bulkGal; if (!G || !opts.galaxies || (deep.on && deep.horizonFade <= 0.01)) return;
+  const G = bulkGal; if (!G || !opts.galaxies || (deep.on && (deep.x < 0 ? deep.horizonFade <= 0.01 : deep.Y > 3e11))) return;
   const camR = Math.hypot(camPos.x, camPos.y, camPos.z);
   const far = camR > 1.5e6 * LY_AU;                /* well outside the Milky Way: real parallax */
   const px = camPos.x, py = camPos.y, pz = camPos.z;
@@ -1244,7 +1258,12 @@ function drawBulkGalaxies() {
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   const nDraw = opts.allGalaxies ? G.n : G.defaultN;
-  const farFade = (1 - 0.85 * clamp((camR / LY_AU - 3e9) / 2e10, 0, 1)) * (deep.on ? deep.horizonFade : 1);   /* a speck from the edge of the universe */
+  const farFade = (1 - 0.85 * clamp((camR / LY_AU - 3e9) / 2e10, 0, 1)) * (deep.on && deep.x < 0 ? deep.horizonFade : 1);   /* a speck from the edge of the universe */
+  const zx = (deep.on && deep.x >= 0) ? deep.zx / (LY_AU * 1e9) : 0;   /* deep future: each galaxy dims as space stretches, the farthest first */
+  if (zx > 0 && !G.bound) {                                /* members of the Local Group stay: gravity holds them */
+    G.bound = new Uint8Array(G.n);
+    if (STRUCT) { const c = STRUCT.lgC, Rb = 3.13e6 * LY_AU; for (let k = 0; k < G.n; k++) if (Math.hypot(G.x[k] - c.x, G.y[k] - c.y, G.z[k] - c.z) < Rb) G.bound[k] = 1; }
+  }
   for (let i = 0; i < nDraw && drawn < budget; i++) {
     let vz, sx, sy, range;
     if (far) {
@@ -1260,6 +1279,7 @@ function drawBulkGalaxies() {
       sy = cy - (ddx * ux + ddy * uy + ddz * uz) * focal / vz; if (sy < -30 || sy > H + 30) continue;
       range = G.dist[i];
     }
+    if (zx > 0) { if (G.bound[i]) ctx.globalAlpha = 1; else { const hf = 1 / Math.pow(1 + zx * G.dist[i], 2); if (hf < 0.03) continue; ctx.globalAlpha = hf; } }
     drawn++;
     const m = G.mag[i] * 0.01;
     const rPx = (G.r[i] / range) * focal;
@@ -1404,18 +1424,26 @@ function bulkSatObject(k) {
   let famous = null;
   if (typeof FAMOUS_SATELLITES !== 'undefined') {
     let best = '';
-    for (const key in FAMOUS_SATELLITES) if (name.toUpperCase().indexOf(key.toUpperCase()) === 0 && key.length > best.length) best = key;
+    /* a key matches a whole name or the start of one, but never the first letters of a longer word (TERRA is not TERRASAR-X) */
+    for (const key in FAMOUS_SATELLITES) if (name.toUpperCase().indexOf(key.toUpperCase()) === 0 && !(/[A-Za-z0-9]$/.test(key) && /[A-Za-z]/.test(name.charAt(key.length))) && key.length > best.length) best = key;
     if (best) famous = FAMOUS_SATELLITES[best];
+  }
+  let size = null;
+  if (typeof SAT_SIZES !== 'undefined') {
+    size = SAT_SIZES[name] || null;
+    if (!size) for (const key in SAT_SIZES) if (key.slice(-1) === '*' && name.indexOf(key.slice(0, -1)) === 0) size = SAT_SIZES[key];
   }
   const o = addObject({
     id: id, name: name, type: cls.label, kind: 'probe', category: 'satellites', color: cls.color,
     radiusAU: 0, mode: 'gp', satIndex: k, prio: 63, minPx: 0,
-    data: { desc: famous || ('From Celestrak\'s active-satellite catalogue. Position is a two-body propagation of the published mean elements, accurate near the element epoch.'),
+    data: { sizeM: size ? size[0] : 0, sizeWhat: size ? size[1] : '', sizeApprox: !!(size && size[2]),
+            desc: famous || ('From Celestrak\'s active-satellite catalogue. Position is a two-body propagation of the published mean elements, accurate near the element epoch.'),
             stats: { 'Class': cls.label, 'Altitude (perigee)': Math.round(a * (1 - e) - 6371).toLocaleString() + ' km',
                      'Altitude (apogee)': Math.round(a * (1 + e) - 6371).toLocaleString() + ' km',
                      'Orbital period': perMin < 120 ? perMin.toFixed(1) + ' min' : (perMin / 60).toFixed(2) + ' hours',
                      'Inclination': (S.I[k] * ANG).toFixed(1) + '°', 'Eccentricity': e.toFixed(4) } }
   });
+  if (!size) o.sizeUnknown = 'The satellite catalogue lists orbits, not sizes, so no size is given for ' + name + '.';
   return o;
 }
 
@@ -1603,8 +1631,9 @@ let focal = 600, cx = 0, cy = 0;
 
 /* Deep time: the future of the universe, played forward on a log clock (see the
    module near the end of this file). Declared here so the draw passes can read it. */
-const deep = { on: false, logY: 0, Y: 1, playing: false, hold: 0, chapter: -1, takeover: false,
-               yrsPerSec: 0, horizonFade: 1, galaxyFade: 1, merge: 0, sunMaxR: 1, clock: 0 };
+const deep = { on: false, x: 0, dir: 1, logY: 0, Y: 1, back: 0, tc: 1.38e10, cosmic: false, a: 1, T: 2.7255,
+               playing: false, hold: 0, chapter: -1, takeover: false,
+               yrsPerSec: 0, horizonFade: 1, galaxyFade: 1, zx: 0, merge: 0, sunMaxR: 1, orbitK: 1, clock: 0 };
 const MIN_DIST = 1e-5, MAX_DIST = 1e16;        /* out to beyond the edge of the observable universe */
 /* The sky can be magnified like a telescope: the field of view narrows from the
    50° walk-around view down to about an arcminute, enough to fill the screen with
@@ -2016,7 +2045,7 @@ function drawBulkStars(fade) {
   let bucket = -1, drawn = 0;
   const budget = 30000;
   const nDraw = opts.allStars ? n : S.defaultN;
-  const life = deep.on ? starLives() : null, dY = deep.Y;
+  const life = deep.on ? (deep.x < 0 ? starAges() : starLives()) : null, dY = deep.x < 0 ? deep.back : deep.Y;   /* not yet born, or already dead */
 
   for (let i = 0; i < nDraw && drawn < budget; i++) {
     if (life && life[i] < dY) continue;                 /* this star has already died */
@@ -2064,7 +2093,7 @@ function drawBulkStars(fade) {
 
 /* 12,000 NGC/IC objects as faint smudges on the celestial sphere */
 function drawBulkDso() {
-  if (!bulkDso || !opts.ngc || (deep.on && deep.Y > 1e8)) return;
+  if (!bulkDso || !opts.ngc || (deep.on && (deep.Y > 1e8 || deep.back > 1e7))) return;
   const fade = skyFade();
   if (fade <= 0.03) return;
   const D = bulkDso, n = D.n, INV = 1 / 32767;
@@ -2107,7 +2136,7 @@ function drawBulkDso() {
 }
 
 function drawBelts() {
-  if (deep.on && deep.Y > 1e15) return;
+  if (deep.on && (deep.Y > 1e11 || deep.back > 4.56e9)) return;
   const days = simJd - J2000;
   for (let f = 0; f < beltFields.length; f++) {
     const field = beltFields[f];
@@ -2123,7 +2152,7 @@ function drawBelts() {
     let bucket = -1;
     for (let k = 0; k < field.n; k++) {
       const th = field.th[k] + field.w[k] * days;
-      const r = field.r[k];
+      const r = field.r[k] * (deep.on && !cfg.spherical ? deep.orbitK : 1);
       let px, py, pz;
       if (cfg.spherical) {
         px = field.ux[k] * r; py = field.uy[k] * r; pz = field.uz[k] * r;
@@ -2156,7 +2185,8 @@ function drawBelts() {
 /* orbit ellipse, sampled directly in eccentric anomaly (no solving needed) */
 function drawOrbit(o, T, alpha) {
   const el = o.el;
-  const a = el.a + (el.aD || 0) * T, e = el.e + (el.eD || 0) * T;
+  const doomed = o.kind === 'planet' && el.a * 215 < 256 * 1.02;   /* Mercury, Venus, Earth: the Sun's tides cancel the widening and they are swallowed (Schröder & Smith 2008) */
+  const a = (el.a + (el.aD || 0) * T) * (deep.on && !doomed ? deep.orbitK : 1), e = el.e + (el.eD || 0) * T;   /* surviving orbits widen as the dying Sun loses mass */
   const I = (el.i + (el.iD || 0) * T) * DEG;
   const w = (el.w + (el.wD || 0) * T) * DEG;
   const O = (el.O + (el.OD || 0) * T) * DEG;
@@ -2263,24 +2293,44 @@ function spherePoly(p, r, DF, verts) {
     for (let i = 0; i < n; i++) { const q = px(verts[i]); if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); }
     ctx.closePath(); return true;
   }
-  let started = false, pendingExit = null, firstEntry = null;
-  for (let i = 0; i < n; i++) {
-    const A = verts[i], B = verts[(i + 1) % n], da = dep[i], db = dep[(i + 1) % n];
-    if (da > 0) { const q = px(A); if (started) ctx.lineTo(q.x, q.y); else { ctx.moveTo(q.x, q.y); started = true; } }
+  /* Clip the outline to the visible hemisphere. It breaks into visible runs, each coming in over the
+     limb and going out again. The polygon winds counter-clockwise, so its inside lies counter-clockwise
+     along the limb from every exit: join each exit to the nearest entry in that direction, which may
+     belong to a different run. */
+  let s = 0, back = 0;
+  for (let i = 0; i < n; i++) if (dep[i] < back) back = dep[i];
+  while (!(dep[s] <= 0 && dep[(s + 1) % n] > 0)) s++;       /* start at an entry so no run wraps past the end */
+  const runs = [];
+  let cur = null;
+  for (let k = 0; k < n; k++) {
+    const i = (s + k) % n, j = (i + 1) % n, da = dep[i], db = dep[j];
+    if (da > 0 && cur) cur.pts.push(px(verts[i]));
     if ((da > 0) !== (db > 0)) {
-      const t = da / (da - db);
-      const c = norm({ x: A.x + t * (B.x - A.x), y: A.y + t * (B.y - A.y), z: A.z + t * (B.z - A.z) });
-      const q = px(c), ang = Math.atan2(q.y - p.y, q.x - p.x);
-      if (da > 0) { ctx.lineTo(q.x, q.y); pendingExit = ang; }
-      else if (pendingExit != null) { ctx.arc(p.x, p.y, r, pendingExit, ang, true); pendingExit = null; }
-      else { if (started) ctx.lineTo(q.x, q.y); else { ctx.moveTo(q.x, q.y); started = true; } firstEntry = ang; }
+      const A = verts[i], B = verts[j], t = da / (da - db);
+      const q = px(norm({ x: A.x + t * (B.x - A.x), y: A.y + t * (B.y - A.y), z: A.z + t * (B.z - A.z) }));
+      const ang = Math.atan2(q.y - p.y, q.x - p.x);
+      if (db > 0) cur = { inA: ang, outA: 0, pts: [q], used: false };
+      else if (cur) { cur.pts.push(q); cur.outA = ang; runs.push(cur); cur = null; }
     }
   }
-  if (pendingExit != null && firstEntry != null) ctx.arc(p.x, p.y, r, pendingExit, firstEntry, true);
-  ctx.closePath();
+  if (!runs.length) return false;
+  const turn = function (from, to) { return ((from - to) % TAU + TAU) % TAU; };   /* counter-clockwise on screen */
+  for (let a = 0; a < runs.length; a++) {
+    if (runs[a].used) continue;
+    let k = a, guard = 0;
+    do {
+      const R = runs[k]; R.used = true;
+      for (let m = 0; m < R.pts.length; m++) { const q = R.pts[m]; if (k === a && m === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); }
+      let best = a, bd = turn(R.outA, runs[a].inA);
+      if (k === a && bd < 1e-9 && back < -1e-6) bd = TAU;     /* out and back in at the same limb point (a band's seam): the whole limb */
+      for (let m = 0; m < runs.length; m++) { if (runs[m].used) continue; const d = turn(R.outA, runs[m].inA); if (d < bd) { bd = d; best = m; } }
+      ctx.arc(p.x, p.y, r, R.outA, R.outA - bd, true);
+      k = best;
+    } while (k !== a && ++guard < 64);
+    ctx.closePath();
+  }
   return true;
 }
-/* orient a polygon counter-clockwise as seen from outside the sphere */
 function orientCCW(verts) {
   let cx = 0, cy = 0, cz = 0;
   verts.forEach(function (v) { cx += v.x; cy += v.y; cz += v.z; });
@@ -2320,8 +2370,9 @@ function paintSphere(p, r, o, sunScreen) {
   const Lx = L.x * DF.e1.x + L.y * DF.e1.y + L.z * DF.e1.z;
   const Ly = -(L.x * DF.e2.x + L.y * DF.e2.y + L.z * DF.e2.z);
   const Lz = L.x * toCam.x + L.y * toCam.y + L.z * toCam.z;      /* > 0: the Sun is behind us */
-  const S = o.dry ? null : (SURFACES[o.id] || null);
-  const F = (S && opts.surfaces && r > 8) ? bodyFrame(o) : null;
+  const S = (o.dry || o.plain) ? null : (SURFACES[o.id] || null);
+  const showSurf = opts.surfaces || (deep.on && o.id === 'earth');   /* deep time always shows Earth's face while it is still the one we know */
+  const F = (S && showSurf && r > 8) ? bodyFrame(o) : null;
 
   ctx.save();
   ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, TAU); ctx.clip();
@@ -2392,7 +2443,7 @@ function paintSphere(p, r, o, sunScreen) {
   ctx.fillStyle = g; ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
   ctx.restore();
   /* a thin atmosphere on the lit limb */
-  const atm = S && opts.surfaces && S.atmosphere;
+  const atm = S && showSurf && S.atmosphere;
   if (atm && r > 12) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -2676,7 +2727,7 @@ function drawRemnant(o, p) {
   const rPx = (o.radiusAU / p.z) * focal;
   const core = Math.max(rPx, opts.realSize ? 0.6 : o.minPx);
   const magnetar = o.sub === 'magnetar';
-  if (o.beams) drawPulsarBeams(o, p);
+  if (o.beams && !(deep.on && deep.Y > (o.data && o.data.spinS < 0.03 ? 1e10 : 1e7))) drawPulsarBeams(o, p);   /* pulsars spin down and fall silent; the fast recycled ones last longest */
   glow(p, Math.max(core * 7, 20), magnetar ? 'rgb(198,140,255)' : 'rgb(160,206,255)', 0.22);
   glow(p, Math.max(core * 2.6, 12), magnetar ? 'rgb(236,212,255)' : 'rgb(224,240,255)', 0.60);
   const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, core);
@@ -2844,11 +2895,11 @@ function render(dt) {
 
     /* Parker Solar Probe's own ellipse */
     const parker = byId.parker;
-    if (parker && parker.el && opts.probes && cam.dist < 60) drawOrbit(parker, T, 0.28);
+    if (parker && parker.el && opts.probes && cam.dist < 60 && !deep.on) drawOrbit(parker, T, 0.28);
   }
 
   /* L2 observatories: the path out from Earth, and the halo once parked */
-  if (opts.probes && cam.dist < 40 && telescopeFocus()) {
+  if (opts.probes && cam.dist < 40 && !deep.on && telescopeFocus()) {
     ctx.save();
     for (let i = 0; i < objects.length; i++) {
       const o = objects[i];
@@ -2877,7 +2928,7 @@ function render(dt) {
   drawRoute();
 
   /* spacecraft cruise lines */
-  if (opts.probes && sunScreen) {
+  if (opts.probes && sunScreen && !deep.on) {
     ctx.save();
     for (let i = 0; i < objects.length; i++) {
       const o = objects[i];
@@ -3509,7 +3560,7 @@ function hexRgb(h) { const n = parseInt(h.slice(1), 16); return 'rgb(' + (n >> 1
     } else {
       centre = raDecToVec(s.ra, s.dec, s.dMly * MLY_AU); R = s.rMly * MLY_AU;
     }
-    s.stats = Object.assign({ 'Distance': fmtDist(Math.hypot(centre.x, centre.y, centre.z)) }, s.stats || {});
+    s.stats = Object.assign({ 'Distance': fmtDist(path ? s.dMly * MLY_AU : Math.hypot(centre.x, centre.y, centre.z)) }, s.stats || {});
     const o = addObject({
       id: s.id, name: s.name, type: TYPE[s.kind], kind: 'region', category: 'deepuniverse', color: s.color,
       radiusAU: R, regionRadius: R, fixed: { x: centre.x, y: centre.y, z: centre.z }, data: s, prio: 50, minPx: 0, noRender: true,
@@ -3539,6 +3590,7 @@ function hexRgb(h) { const n = parseInt(h.slice(1), 16); return 'rgb(' + (n >> 1
 if (STRUCT) objects.forEach(function (o) {
   if (o.category !== 'galaxies' || !o.pos || o.id === 'milkyway') return;
   o.lg = Math.hypot(o.pos.x - STRUCT.lgC.x, o.pos.y - STRUCT.lgC.y, o.pos.z - STRUCT.lgC.z) < 5e6 * LY_AU;
+  o.lgBound = Math.hypot(o.pos.x - STRUCT.lgC.x, o.pos.y - STRUCT.lgC.y, o.pos.z - STRUCT.lgC.z) < 3.13e6 * LY_AU;   /* inside the radius where gravity beats the expansion (0.96 Mpc) */
   if (o.id === 'm31' || o.id === 'm33' || o.id === 'lmc' || o.id === 'smc') o.prio = 74;   /* the big members win label space */
 });
 function deepVisible(o, camFromSunLy) {
@@ -3620,7 +3672,7 @@ function drawDistant(o, p) {
 }
 
 function drawConstellationNames() {
-  if (!opts.constellations || (deep.on && deep.Y > 5e4)) return;   /* the figures distort as the stars move */
+  if (!opts.constellations || (deep.on && (deep.Y > 5e4 || deep.back > 5e4))) return;   /* the figures distort as the stars move */
   const fade = skyFade();
   if (fade <= 0.03) return;
   ctx.save();
@@ -4044,7 +4096,6 @@ function select(id) {
   renderStats(o);
   renderRelated(o);
   $('btnFollow').classList.toggle('on', cam.follow === id);
-  $('btnCompare').style.display = sizable(o) ? '' : 'none';
   refreshGotoLabel();
 }
 
@@ -4111,6 +4162,29 @@ $('focusClear').addEventListener('click', function () { cam.follow = null; updat
 /* Catalogue rows are packed arrays, not objects. When one is searched for or
    selected, promote just that row into a normal object so the rest of the app
    (info panel, fly-to, history) needs no special cases. */
+/* A star's radius in Suns from its absolute magnitude and B-V colour: temperature from the colour, bolometric
+   correction from the temperature (Flower 1996, coefficients as corrected by Torres 2010), then luminosity and the
+   Stefan-Boltzmann law. The colour-temperature relation is Flower's own fit, except for red dwarfs, where
+   Ballesteros (2012) does better. Tested against 370 stars with measured angular diameters: typically within 5-10%,
+   nine in ten within about 20%, before the error in the catalogue distance, which the radius scales with. It returns null where the method is known to fail: very blue stars (colour stops
+   tracking temperature), very red ones, white dwarfs, and luminous blue-white stars, which are usually hot stars
+   reddened by dust and would come out twice too large. Dust otherwise shifts the answer by only a few per cent. */
+function photoRadius(Mv, bv) {
+  if (!(bv > -0.15 && bv < 1.35) || !isFinite(Mv)) return null;
+  if ((Mv > 10 && bv < 1.0) || (Mv < -3 && bv < 0.5)) return null;
+  let x;
+  if (bv >= 1.05 && Mv > 4) x = Math.log10(4600 * (1 / (0.92 * bv + 1.7) + 1 / (0.92 * bv + 0.62)));
+  else { const F = [3.979145106714099, -0.654992268598245, 1.740690042385095, -4.608815154057166, 6.792599779944473, -5.396909891322525, 2.192970376522490, -0.359495739295671]; x = 0; for (let k = F.length - 1; k >= 0; k--) x = x * bv + F[k]; }
+  const T = Math.pow(10, x);
+  const P = x < 3.70 ? [-0.190537291496456e5, 0.155144866764412e5, -0.421278819301717e4, 0.381476328422343e3]
+          : x < 3.90 ? [-0.370510203809015e5, 0.385672629965804e5, -0.150651486316025e5, 0.261724637119416e4, -0.170623810323864e3]
+          : [-0.118115450538963e6, 0.137145973583929e6, -0.636233812100225e5, 0.147412923562646e5, -0.170587278406872e4, 0.788731721804990e2];
+  let bc = 0;
+  for (let k = P.length - 1; k >= 0; k--) bc = bc * x + P[k];
+  const L = Math.pow(10, -0.4 * (Mv + bc - 4.73));          /* 4.73: the Sun's bolometric magnitude on Flower's scale */
+  const R = Math.sqrt(L) * Math.pow(5772 / T, 2);
+  return (R > 0.05 && R < 2000) ? R : null;
+}
 function bulkStarObject(i) {
   const id = 'hyg' + i;
   if (byId[id]) return byId[id];
@@ -4119,16 +4193,24 @@ function bulkStarObject(i) {
   const ly = dAU / LY_AU, mag = S.mag[i] * 0.01;
   const spect = e ? e[3] : '';
   const sp = SPEC[(spect || 'G').charAt(0)] || SPEC.G;
+  /* no estimate when the colour is the catalogue's filler value, when the distance is too uncertain for it to mean much
+     (the radius scales with distance), or for named stars of types the method cannot handle (pulsating red giants, carbon stars, O stars) */
+  const pc = ly / PC_LY, trusty = S.ci[i] !== 650 && pc <= 500 && !/^[MCSNO]/.test(spect);
+  const est = trusty ? photoRadius(mag - 5 * (Math.log(pc) / Math.LN10) + 5, S.ci[i] * 0.001) : null;
+  const rough = est && pc > 300;
   const o = addObject({
     id: id, name: e ? e[1] : 'HYG ' + i, type: 'Star' + (spect ? ' · ' + spect : ''),
     kind: 'star', category: 'stars', color: ciColor(S.ci[i] * 0.001),
-    radiusAU: sp.r * R_SUN_AU, appMag: mag,
+    radiusAU: (est || sp.r) * R_SUN_AU, appMag: mag,
     absMag: mag - 5 * (Math.log(ly / (LY_AU && PC_LY) || 1) / Math.LN10),
     fixed: { x: S.x[i], y: S.y[i], z: S.z[i] }, prio: 38 - mag, minPx: 1.2,
     data: { d: ly, desc: 'From the HYG catalogue of nearby and naked-eye stars.',
             stats: { 'Magnitude': mag.toFixed(2), 'Distance': fmtLy(ly),
-                     'Spectral type': spect || '—', 'Constellation': e ? e[2] : '—' } }
+                     'Spectral type': spect || '—', 'Constellation': e ? e[2] : '—',
+                     'Radius': est ? '≈ ' + (est >= 100 ? Math.round(est / 10) * 10 : est >= 10 ? Math.round(est) : est.toFixed(est >= 1 ? 1 : 2)) + ' × Sun (' + (rough ? 'rough estimate' : 'estimated') + ' from brightness and colour)' : 'No estimate (this catalogue gives only brightness and colour)' } }
   });
+  if (est) o.sizeApprox = rough ? 'a rough estimate from its brightness and colour; its distance is uncertain' : 'estimated from its brightness and colour';
+  else o.sizeUnknown = 'The catalogue gives only the brightness and colour of ' + o.name + ', which is not enough to estimate its size reliably.';
   o.absMag = mag - 5 * (Math.log(ly / PC_LY) / Math.LN10) + 5;
   o.pos = o.fixed;
   return o;
@@ -4151,7 +4233,7 @@ function bulkDsoObject(i) {
     color: '#cdd6ee', radiusAU: 0, dir: dir,
     fixed: { x: dir.x * 1e11, y: dir.y * 1e11, z: dir.z * 1e11 },
     prio: 25, minPx: 0, noRender: true, angArcmin: maj > 0 ? maj : 0,
-    data: { desc: 'From the OpenNGC catalogue. No reliable distance is published for most NGC entries, so this is shown as a direction on the sky rather than placed in depth.',
+    data: { desc: 'From the OpenNGC catalogue, which carries no distances, so this is shown as a direction on the sky rather than placed in depth.',
             stats: { 'Catalogue name': D.names[i], 'Type': full,
                      'Magnitude': mag > 90 ? '—' : mag.toFixed(1),
                      'Apparent size': maj > 0 ? maj.toFixed(1) + ' arcmin' : '—' } }
@@ -4179,6 +4261,8 @@ function bulkExoObject(i) {
                      'Radius': rE > 0 ? rE.toFixed(2) + ' × Earth' : '—',
                      'Discovered': E.year[i] || '—' } }
   });
+  if (!(rE > 0)) o.sizeUnknown = 'No radius has been measured for ' + o.name + ', so its size is not known.';
+  else o.sizeR = rE * 6371 / AU_KM;                       /* the real radius; radiusAU keeps a floor so tiny planets stay drawable */
   o.pos = o.fixed;
   return o;
 }
@@ -4246,18 +4330,204 @@ function searchBulk(q, out, limit) {
    journey takes at real vehicle speeds, plus the minimum-energy transfer. ---- */
 const route = { from: 'earth', to: null, open: false };
 const MU_SUN = 2.9591220828e-4;                  /* AU^3 / day^2 */
-/* anything with a place in space can be a destination: planets, stars, galaxies,
-   quasars, even the centre of a supercluster. Directions on the sky (constellations,
-   telescope fields, undistanced NGC entries) and Sun-centred belts cannot. */
-function routable(o) {
-  if (!o || !o.pos) return false;
-  if (o.kind === 'constellation' || o.kind === 'deepfield' || o.kind === 'ngc') return false;
-  if (o.kind === 'region' && !o.centre) return false;
-  return true;
+/* Anything can be picked for a trip. Most things are places; the few that are not each get an
+   honest answer from tripPlace(): a belt or a spiral arm is entered at its nearest part, a
+   constellation or a telescope's patch of sky is only a direction, so the trip goes to something
+   real inside it, and an entry with no published distance cannot be timed at all. */
+function routable(o) { return !!(o && o.pos); }
+const CON_ABBR = { andromeda: 'And', antlia: 'Ant', apus: 'Aps', aquarius: 'Aqr', aquila: 'Aql', ara: 'Ara', aries: 'Ari', auriga: 'Aur', bootes: 'Boo',
+  caelum: 'Cae', camelopardalis: 'Cam', cancer: 'Cnc', canesvenatici: 'CVn', canismajor: 'CMa', canisminor: 'CMi', capricornus: 'Cap', carina: 'Car',
+  cassiopeia: 'Cas', centaurus: 'Cen', cepheus: 'Cep', cetus: 'Cet', chamaeleon: 'Cha', circinus: 'Cir', columba: 'Col', comaberenices: 'Com',
+  coronaaustralis: 'CrA', coronaborealis: 'CrB', corvus: 'Crv', crater: 'Crt', crux: 'Cru', cygnus: 'Cyg', delphinus: 'Del', dorado: 'Dor', draco: 'Dra',
+  equuleus: 'Equ', eridanus: 'Eri', fornax: 'For', gemini: 'Gem', grus: 'Gru', hercules: 'Her', horologium: 'Hor', hydra: 'Hya', hydrus: 'Hyi', indus: 'Ind',
+  lacerta: 'Lac', leo: 'Leo', leominor: 'LMi', lepus: 'Lep', libra: 'Lib', lupus: 'Lup', lynx: 'Lyn', lyra: 'Lyr', mensa: 'Men', microscopium: 'Mic',
+  monoceros: 'Mon', musca: 'Mus', norma: 'Nor', octans: 'Oct', ophiuchus: 'Oph', orion: 'Ori', pavo: 'Pav', pegasus: 'Peg', perseus: 'Per', phoenix: 'Phe',
+  pictor: 'Pic', pisces: 'Psc', piscisaustrinus: 'PsA', puppis: 'Pup', pyxis: 'Pyx', reticulum: 'Ret', sagitta: 'Sge', sagittarius: 'Sgr', scorpius: 'Sco',
+  sculptor: 'Scl', scutum: 'Sct', serpens: 'Ser', sextans: 'Sex', taurus: 'Tau', telescopium: 'Tel', triangulum: 'Tri', triangulumaustrale: 'TrA',
+  tucana: 'Tuc', ursamajor: 'UMa', ursaminor: 'UMi', vela: 'Vel', virgo: 'Vir', volans: 'Vol', vulpecula: 'Vul' };
+/* the named stars this catalogue places in a constellation, brightest first */
+function constellationStars(o) {
+  if (o.conStars) return o.conStars;
+  const ab = CON_ABBR[o.id], out = [];
+  if (ab) {
+    for (let i = 0; i < objects.length; i++) {
+      const s = objects[i];
+      if (s.kind === 'star' && s.data && s.data.con === ab && s.appMag != null) out.push({ id: s.id, name: s.name, mag: s.appMag, ly: Math.hypot(s.pos.x, s.pos.y, s.pos.z) / LY_AU });
+    }
+    if (bulkStars) for (const k in bulkStars.named) {
+      const e = bulkStars.named[k];
+      if (e[2] === ab) out.push({ hyg: +k, name: e[1], mag: bulkStars.mag[k] * 0.01, ly: Math.hypot(bulkStars.x[k], bulkStars.y[k], bulkStars.z[k]) / LY_AU });
+    }
+    out.sort(function (p, q) { return p.mag - q.mag; });
+  }
+  return (o.conStars = out);
 }
-function routePair() {
-  const a = route.from && byId[route.from], b = route.to && byId[route.to];
-  return (routable(a) && routable(b) && a !== b) ? [a, b] : null;
+/* "the Moon", "the Crab Nebula", but "Mars" and "Stephan's Quintet" */
+function theName(o, cap) {
+  let n = o.name;
+  const station = { 'ISS (ZARYA)': 'International Space Station', 'CSS (TIANHE)': 'Tiangong space station' }[n];   /* the catalogue names these after one module */
+  if (station) return (cap ? 'The ' : 'the ') + station;
+  if (/^The /.test(n)) n = n.slice(4);
+  if (n === 'Observable universe') n = 'observable universe';
+  const art = /^(Moon|Sun)$/.test(n) || (/(Nebula|Galaxy|Cluster|Belt|Cloud|Milky Way|Group|Supercluster|[Uu]niverse|Field|field|Spur|Arm|Wall|Void|Telescope|Observatory|Pleiades|Hyades|Pillars|Cliffs|bulge|Triangle|Arc)\b/.test(n) && !/'s /.test(n) && !/^(NGC|IC|M\d)/.test(n));
+  return (art ? (cap ? 'The ' : 'the ') : '') + n;
+}
+/* The brightest star of a constellation, found in this app's own catalogues by its published position
+   and brightness (CON_LUCIDA in data.js). lucidaRef only looks it up; nothing joins the scene until a trip needs it. */
+function lucidaRef(o) {
+  if (o.lucidaRef !== undefined) return o.lucidaRef;
+  const L = (typeof CON_LUCIDA !== 'undefined') && CON_LUCIDA[o.id];
+  o.lucidaRef = null;
+  if (!L) return null;
+  const t = norm(raDecToVec(L[1], L[2], 1)), near = Math.cos(0.3 * DEG);
+  let best = null, bm = 99;
+  for (let i = 0; i < objects.length; i++) {
+    const s = objects[i];
+    if (s.kind !== 'star' || s.appMag == null || !s.pos) continue;
+    const r = Math.hypot(s.pos.x, s.pos.y, s.pos.z);
+    if (r > 0 && (s.pos.x * t.x + s.pos.y * t.y + s.pos.z * t.z) / r > near && Math.abs(s.appMag - L[3]) < 0.8 && s.appMag < bm) { best = { id: s.id, name: s.name }; bm = s.appMag; }
+  }
+  if (!best && bulkStars) {
+    const S = bulkStars;
+    let bi = -1;
+    for (let i = 0; i < S.n && S.mag[i] <= 650; i++) {      /* sorted brightest first: every lucida is in the first few thousand rows */
+      const r = Math.hypot(S.x[i], S.y[i], S.z[i]);
+      if (r > 0 && (S.x[i] * t.x + S.y[i] * t.y + S.z[i] * t.z) / r > near && Math.abs(S.mag[i] * 0.01 - L[3]) < 0.8 && S.mag[i] * 0.01 < bm) { bi = i; bm = S.mag[i] * 0.01; }
+    }
+    if (bi >= 0) {
+      if (!S.named[bi]) S.named[bi] = [bi, L[0], CON_ABBR[o.id] || '', ''];   /* give it its name, so it can be found by search too */
+      best = { hyg: bi, name: S.named[bi][1] };
+    }
+  }
+  if (best && o.data && o.data.stats) o.data.stats['Brightest star'] = best.name;
+  return (o.lucidaRef = best);
+}
+function constellationLucida(o) {
+  const r = lucidaRef(o);
+  return !r ? null : r.id ? byId[r.id] : bulkStarObject(r.hyg);
+}
+constellationList.forEach(lucidaRef);
+function lyRound(ly) {
+  if (ly < 10) return ly.toFixed(1) + ' light years';
+  if (ly < 100) return Math.round(ly) + ' light years';
+  if (ly < 1e4) return (Math.round(ly / 10) * 10).toLocaleString() + ' light years';
+  return fmtDist(ly * LY_AU);
+}
+function beltCfg(o) { for (let f = 0; f < beltFields.length; f++) if (beltFields[f].cfg.id === o.id) return beltFields[f].cfg; return null; }
+/* the point on a spiral arm's centre line nearest to P, as the arm is drawn in the galaxy model */
+function armNearest(arm, P) {
+  let best = null, bd = Infinity;
+  for (let k = 0; k <= 480; k++) {
+    const th = arm.t0 + (arm.t1 - arm.t0) * k / 480, r = arm.r0 * Math.exp(arm.k * th);
+    if (r > 15.5 || r < 3.2) continue;
+    const q = MW.toAU(r * Math.cos(th), r * Math.sin(th), 0), d = Math.hypot(q.x - P.x, q.y - P.y, q.z - P.z);
+    if (d < bd) { bd = d; best = q; }
+  }
+  return { pos: best, d: bd };
+}
+/* The nearest points of two spiral arms to each other, as drawn (cached: the route is redrawn every frame). */
+function armPair(i, j) {
+  if (i > j) { const p = armPair(j, i); return [p[1], p[0]]; }
+  const key = i + '-' + j; armPair.cache = armPair.cache || {};
+  if (armPair.cache[key]) return armPair.cache[key];
+  const line = function (arm) {
+    const out = [];
+    for (let k = 0; k <= 480; k++) { const th = arm.t0 + (arm.t1 - arm.t0) * k / 480, r = arm.r0 * Math.exp(arm.k * th); if (r <= 15.5 && r >= 3.2) out.push(MW.toAU(r * Math.cos(th), r * Math.sin(th), 0)); }
+    return out;
+  };
+  const pa = line(MW.arms[i]), pb = line(MW.arms[j]); let best = null, bd = Infinity;
+  for (let a = 0; a < pa.length; a++) for (let b = 0; b < pb.length; b++) { const d = Math.hypot(pa[a].x - pb[b].x, pa[a].y - pb[b].y, pa[a].z - pb[b].z); if (d < bd) { bd = d; best = [pa[a], pb[b]]; } }
+  return (armPair.cache[key] = best);
+}
+/* Where a trip to o actually goes, seen from the other end of the trip at `ref`.
+   Returns { pos, name, obj?, note? } for a place, { inside: true } when ref is already in it,
+   or { none: reason } when there is honestly no trip to time. */
+function tripPlace(o, ref) {
+  ref = ref || { x: 0, y: 0, z: 0 };
+  const d = o.data || {};
+  if (o.kind === 'constellation') {
+    const st = constellationStars(o);
+    if (!st.length && !constellationLucida(o)) return { none: o.name + ' is a pattern of stars on the sky, not a place. Its stars lie at very different distances, so there is no single trip to time: pick one of its stars instead.' };
+    const luc = constellationLucida(o);
+    const s0 = st[0], star = luc || (s0.id ? byId[s0.id] : bulkStarObject(s0.hyg));
+    const few = st.slice(0, 4).map(function (s) { return s.name + ', ' + lyRound(s.ly); });
+    return { pos: star.pos, obj: star, name: star.name,
+             note: o.name + ' is a pattern on the sky, not a place' + (few.length > 1 ? ': its stars lie at very different distances (' + few.join('; ') + ')' : ', and its stars lie at very different distances') +
+                   '. This is the trip to ' + star.name + (luc ? ', its brightest star.' : ', the brightest of its named stars in this catalogue.') };
+  }
+  if (o.kind === 'deepfield') {
+    const t = d.link && byId[d.link];
+    if (t) return { pos: t.pos, obj: t, name: t.name, note: 'A telescope view is a direction on the sky, not a place. This is the trip to what it shows: ' + (/nebula|galaxy|cluster/i.test(t.name) ? 'the ' : '') + t.name + '.' };
+    if (d.dLy > 0) return { pos: { x: o.dir.x * d.dLy * LY_AU, y: o.dir.y * d.dLy * LY_AU, z: o.dir.z * d.dLy * LY_AU }, name: o.name,
+                            note: 'A telescope view is a direction on the sky, not a place. This is the trip to what it shows, about ' + lyRound(d.dLy) + ' away' + (d.dWhat ? ' (' + d.dWhat + ')' : '') + '.' };
+    let far = null;
+    (d.highlights || []).forEach(function (h) { if (h.z > 0 && !h.outside && (!far || h.z > far.z)) far = h; });
+    if (far) {
+      if (!far.dAU) far.dAU = cosmo(far.z).comoving * 1e9 * LY_AU;
+      const dir = far.ra != null ? norm(raDecToVec(far.ra, far.dec, 1)) : o.dir;
+      return { pos: { x: dir.x * far.dAU, y: dir.y * far.dAU, z: dir.z * far.dAU }, name: far.name,
+               note: theName(o, true) + ' is a window through the universe, not a place: what it shows lies at every distance. This is the trip to the farthest find listed for it, ' + far.name + (/z\s*[≈=]/.test(far.name) ? '' : ' (redshift ' + far.z + ')') + ', at the distance it has today.' };
+    }
+    return { none: d.tripNote || (theName(o, true) + ' is a patch of sky, not a place. The things in it lie at every distance, from nearby stars to galaxies more than thirty billion light years away, so there is no single trip to time.') };
+  }
+  if (o.kind === 'ngc') return { none: 'This catalogue carries no distance for ' + o.name + ', so here it is only a direction on the sky and a trip to it cannot be timed.' };
+  if (o.kind === 'region') {
+    const cfg = o.category === 'belts' ? beltCfg(o) : null;
+    if (cfg) {
+      /* a ring (or, for the Oort cloud, a shell) around the Sun: go to its nearest part */
+      const flat = !cfg.spherical, rr = flat ? Math.hypot(ref.x, ref.y) : Math.hypot(ref.x, ref.y, ref.z);
+      const span = cfg.span || [cfg.rMin, cfg.rMax];        /* the published edges; rMin and rMax only place the dots */
+      if (rr >= span[0] && rr <= span[1] && (!flat || Math.abs(ref.z) < 0.27 * rr)) return { inside: true };
+      const k = rr > 0 ? clamp(rr, span[0], span[1]) / rr : 0;
+      const p = rr > 0 ? { x: ref.x * k, y: ref.y * k, z: flat ? 0 : ref.z * k } : { x: span[0], y: 0, z: 0 };
+      return { pos: p, name: 'the ' + o.name,
+               note: 'The ' + o.name + ' is a ' + (flat ? 'ring' : 'shell') + ' around the Sun, from about ' + span[0].toLocaleString() + ' to ' + span[1].toLocaleString() + ' AU out, so this is the trip to its nearest part.' };
+    }
+    if (o.armIndex != null && MW && MW.arms[o.armIndex]) {
+      const arm = MW.arms[o.armIndex], n = armNearest(arm, ref);
+      if (n.d < 2 * arm.w * MW.KPC) return { inside: true };
+      return { pos: n.pos, name: 'the ' + o.name, note: 'A spiral arm is a long lane of stars, not a single place. This is the trip to its nearest part, as the arm is drawn in this model of the galaxy.' };
+    }
+    if (o.id === 'observable') return { pos: { x: ref.x + o.radiusAU, y: ref.y, z: ref.z }, name: 'the edge of the observable universe',
+                                        note: 'The observable universe is centred on whoever is looking, so there is no trip to it, only to its edge, which is the same distance away in every direction.' };
+    if (o.structLevel >= 1 && Math.hypot(ref.x - o.pos.x, ref.y - o.pos.y, ref.z - o.pos.z) < o.radiusAU) {
+      const c = o.id === 'milkyway' ? 'the black hole Sagittarius A*' : (d.stats && d.stats['Centre'] ? d.stats['Centre'].replace(/^(The|Between)\b/, function (m) { return m.toLowerCase(); }) : '');
+      return { pos: o.pos, obj: o, name: 'the centre of the ' + o.name, note: 'We are inside the ' + o.name + ', so this is the trip to its centre' + (c ? ': ' + c : '') + '.' };
+    }
+    const reg = STRUCT && STRUCT.regions.filter(function (g) { return g.obj === o; })[0];
+    if (reg && reg.path) {                                  /* a wall: go to the nearest point of its drawn outline, not the outline's centroid */
+      let best = reg.path[0], bd = Infinity;
+      reg.path.forEach(function (q) { const dd = Math.hypot(q.x - ref.x, q.y - ref.y, q.z - ref.z); if (dd < bd) { bd = dd; best = q; } });
+      return { pos: best, name: 'the ' + o.name, note: 'The ' + o.name + ' is a long sheet of galaxies, not a single place. This is the trip to its nearest part, as it is outlined in this map.' };
+    }
+    if (d.rMly > 0) return { pos: o.pos, obj: o, name: 'the centre of the ' + o.name, note: 'The ' + o.name + ' is a region ' + fmtSize(2 * o.radiusAU, true) + ' across, so this is the trip to its centre.' };
+  }
+  return { pos: o.pos, obj: o, name: o.name };
+}
+/* both ends of the trip, or the reason there is none */
+function routeStops() {
+  const A = route.from && byId[route.from], B = route.to && byId[route.to];
+  if (!A || !B) return { hint: 'Choose where the trip starts and where it ends. Anything works: planets, moons, spacecraft, stars, nebulae, galaxies, quasars.' };
+  if (A === B) return { hint: 'Pick two different places.' };
+  if (MW && A.armIndex != null && B.armIndex != null && MW.arms[A.armIndex] && MW.arms[B.armIndex]) {
+    const p = armPair(A.armIndex, B.armIndex);
+    return { a: { pos: p[0], name: 'the ' + A.name }, b: { pos: p[1], name: 'the ' + B.name },
+             notes: ['A spiral arm is a long lane of stars, not a single place. This is the trip between the nearest parts of the two arms, as they are drawn in this model of the galaxy.'] };
+  }
+  const origin = { x: 0, y: 0, z: 0 };
+  const plain = function (o) { const p = tripPlace(o, origin); return p.pos || origin; };
+  const a = tripPlace(A, plain(B)), b = tripPlace(B, a.pos || plain(A));
+  if (a.none || b.none) return { none: true, notes: [a.none, b.none].filter(Boolean) };
+  if (a.inside || b.inside) {
+    const inn = a.inside ? A : B, out = a.inside ? B : A, p = a.inside ? b : a;
+    const stood = p.obj && p.obj !== out;                   /* a star or a target stood in for the thing picked */
+    return { none: true, notes: (stood && p.note ? [p.note] : []).concat([(stood ? theName(p.obj, true) : theName(out, true)) + ' is already inside the ' + inn.name.replace(/^The /, '') + ', so there is no trip to make.']) };
+  }
+  if (Math.hypot(b.pos.x - a.pos.x, b.pos.y - a.pos.y, b.pos.z - a.pos.z) === 0) {
+    const place = (a.obj && a.obj.name === a.name) ? theName(a.obj) : a.name;   /* 'Vega', or 'the centre of the Milky Way' */
+    return { none: true, notes: [a.note, b.note].filter(Boolean).concat(['Both ends of this trip are the same place, ' + place + ', so there is no trip to make.']) };
+  }
+  return { a: a, b: b, notes: [a.note, b.note].filter(Boolean) };
 }
 function heliocentric(o) { return o.kind === 'sun' || ((o.kind === 'planet' || o.kind === 'dwarf') && o.el); }
 function fmtKm(km) {
@@ -4276,26 +4546,29 @@ function fmtDuration(s) {
   const y = dd / 365.25;
   if (y < 1000) return y.toFixed(y < 10 ? 2 : 1) + ' years';
   if (y < 1e6) return Math.round(y).toLocaleString() + ' years';
-  if (y < 1e9) return (y / 1e6).toFixed(2) + ' million years';
-  if (y < 1e12) return (y / 1e9).toFixed(2) + ' billion years';
-  if (y < 1e15) return (y / 1e12).toFixed(2) + ' trillion years';
+  if (y < 9.995e8) return (y / 1e6).toFixed(2) + ' million years';       /* 999.995 million rounds up: say 1.00 billion, not 1000.00 million */
+  if (y < 9.995e11) return (y / 1e9).toFixed(2) + ' billion years';
+  if (y < 9.995e14) return (y / 1e12).toFixed(2) + ' trillion years';
   return (y / 1e15).toFixed(1) + ' quadrillion years';
 }
 function renderRoute() {
   const box = $('routeResult'); if (!box) return;
-  const pair = routePair();
-  if (!pair) { box.innerHTML = '<div class="route-hint">Choose two places that have a position in space — planets, moons, spacecraft, stars, galaxies, quasars.</div>'; return; }
-  const a = pair[0], b = pair[1];
+  const R = routeStops();
+  if (R.hint) { box.innerHTML = '<div class="route-hint">' + esc(R.hint) + '</div>'; return; }
+  let html = '';
+  R.notes.forEach(function (n) { html += '<div class="route-note about">' + esc(n) + '</div>'; });
+  if (R.none) { box.innerHTML = html; return; }
+  const a = R.a, b = R.b;
   const dAU = Math.hypot(b.pos.x - a.pos.x, b.pos.y - a.pos.y, b.pos.z - a.pos.z);
   const km = dAU * AU_KM;
-  let html = '<div class="route-dist"><strong>' + esc(fmtDist(dAU)) + '</strong><span>' +
+  html += '<div class="route-dist"><strong>' + esc(fmtDist(dAU)) + '</strong><span>' +
              ((dAU < 0.02 || km >= 1e15) ? '' : fmtKm(km) + ' · ') + 'right now, straight line</span></div>';
   html += '<table class="route-table">';
   VEHICLES.forEach(function (v) {
     html += '<tr><td>' + esc(v.name) + '<span>' + esc(v.note) + '</span></td><td>' + esc(fmtDuration(km / v.kmps)) + '</td></tr>';
   });
   html += '</table>';
-  html += bestShot(a, b);
+  html += bestShot(a.obj || {}, b.obj || {});
   const ly = dAU / LY_AU;
   if (ly > 1e8) {
     const eh = eventHorizonGly();
@@ -4319,7 +4592,7 @@ const REAL_TRIPS = {
   uranus: 'Voyager 2 reached Uranus in 8.4 years (1977–1986) by slingshotting past Jupiter and Saturn.',
   neptune: 'Voyager 2 reached Neptune in 12 years (1977–1989), the only visit so far.',
   pluto: 'New Horizons flew past Pluto 9.5 years after launch (2006–2015), using a Jupiter slingshot.',
-  m31: 'No need to go: Andromeda is coming to us at about 110 km/s, and the two galaxies will merge in roughly 4.5 billion years.',
+  m31: 'No need to go: Andromeda is coming to us at about 110 km/s and makes its first close pass in roughly 5 billion years.',
   alphacenA: 'Breakthrough Starshot hopes to send gram-sized light-sail probes there at a fifth of light speed, arriving about 20 years after launch.'
 };
 function helioAt(o, jd) { return keplerPos(o.el, (jd - J2000) / 36525); }
@@ -4412,88 +4685,272 @@ function closeRoute() {
   if (route.panelWasOpen) panel.classList.remove('hidden');
 }
 
-/* ---- Size comparison: two bodies side by side, to scale ---- */
+/* ---- Size comparison: two things side by side, to scale ----
+   Real sizes wherever a thing has one. A constellation, a telescope's patch of sky or a catalogue
+   entry with no distance has only an apparent size, so those are compared by how big they look
+   from Earth instead. Where neither exists the panel says why. */
 const compare = { a: 'earth', b: 'jupiter', open: false };
-function sizable(o) { return o && o.radiusAU > 0 && o.kind !== 'deepfield' && o.kind !== 'constellation' && o.kind !== 'ngc' && (o.kind !== 'region' || o.centre) && o.kind !== 'distant'; }
-function fmtSize(au) {
+const RS_KM = 2.953;                                        /* Schwarzschild radius per solar mass, km */
+function fmtSize(au, approx) {
   const km = au * AU_KM;
+  if (approx) {                                             /* an estimate deserves two figures, not five */
+    const two = function (v) { return Number(v.toPrecision(2)).toLocaleString('en-US', { maximumFractionDigits: 2 }); }, ly = au / LY_AU;
+    if (km < 1) return two(km * 1000) + ' m';
+    if (km < 1e6) return two(km) + ' km';
+    if (km < 1e9) return two(km / 1e6) + ' million km';
+    if (au < 30000) return two(au) + ' AU';
+    if (ly < 1e6) return two(ly) + ' light years';
+    if (ly < 1e9) return two(ly / 1e6) + ' million light years';
+    return two(ly / 1e9) + ' billion light years';
+  }
+  if (km < 0.001) return (km * 1e5).toFixed(1) + ' cm';
+  if (km < 1) return (km * 1000).toFixed(km < 0.1 ? 1 : 0) + ' m';
+  if (km < 100) return km.toFixed(1) + ' km';
   if (km < 1e6) return Math.round(km).toLocaleString() + ' km';
   if (km < 1e8) return (km / 1e6).toFixed(2) + ' million km';
   return fmtDist(au);
 }
-function sizeLabel(o) { return o.kind === 'blackhole' ? 'Shadow' : o.kind === 'region' ? 'Extent' : 'Diameter'; }
+function fmtArc(am) {
+  if (am >= 60) return (am / 60).toFixed(am >= 600 ? 0 : 1) + '°';
+  if (am >= 1) return am.toFixed(am >= 10 ? 0 : 1) + ' arcminutes';
+  const as = am * 60;
+  if (as >= 1) return as.toFixed(as >= 10 ? 0 : 1) + ' arcseconds';
+  if (as >= 1e-3) return (as * 1e3).toFixed(as >= 0.01 ? 0 : 1) + ' milliarcseconds';
+  if (as >= 1e-6) return (as * 1e6).toFixed(as >= 1e-5 ? 0 : 1) + ' microarcseconds';
+  return fmtPow(as) + ' arcseconds';
+}
+function fmtSuns(m) { return m >= 1e9 ? (m / 1e9).toFixed(m >= 1e10 ? 0 : 1) + ' billion Suns' : m >= 1e6 ? Math.round(m / 1e6).toLocaleString() + ' million Suns' : Math.round(m).toLocaleString() + ' Suns'; }
+/* The real size of a thing: { r: radius in AU, label, what, approx, look }, or null if it has none. */
+function sizeInfo(o) {
+  if (!o || o.sizeUnknown) return null;
+  const d = o.data || {};
+  switch (o.kind) {
+    case 'constellation': case 'ngc': return null;
+    case 'deepfield': {
+      /* a close-up of one thing at a known distance has a real width: its field of view at that distance */
+      const t = d.link && byId[d.link], ly = t ? Math.hypot(t.pos.x, t.pos.y, t.pos.z) / LY_AU : d.dLy;
+      if (!(ly > 0) || !(o.angArcmin > 0)) return null;
+      return { r: ly * LY_AU * Math.tan(o.angArcmin / 2 / 60 * DEG), label: 'Width of the view', what: 'at ' + lyRound(ly) + ', the distance of what it shows', approx: true, look: 'patch' };
+    }
+    case 'probe': return d.sizeM > 0 ? { r: d.sizeM / 2000 / AU_KM, label: 'Size', what: d.sizeWhat || '', approx: !!d.sizeApprox, look: 'craft' } : null;
+    case 'distant':
+      if (d.rMly > 0) return { r: d.rMly * 1e6 * LY_AU, label: 'Width', what: d.rWhat || '', approx: true, look: 'glow' };
+      if (d.sizeLy > 0) return { r: d.sizeLy / 2 * LY_AU, label: 'Diameter', what: d.sizeWhat || '', approx: true, look: 'glow' };
+      if (d.massSuns > 0) return { r: RS_KM * d.massSuns / AU_KM, label: 'Its black hole', what: 'event horizon, worked out from an estimated mass of ' + fmtSuns(d.massSuns) + (d.massNote ? ' (' + d.massNote + ')' : ''), approx: true, look: 'bh' };
+      return null;
+    case 'region': {
+      const cfg = o.category === 'belts' ? beltCfg(o) : null;
+      if (cfg) return { r: (cfg.span || [0, cfg.rMax])[1], label: 'Width', what: 'outer edge to outer edge', approx: true, look: 'region' };
+      if (o.armIndex != null || o.id === 'bar') return d.lengthLy > 0 ? { r: d.lengthLy / 2 * LY_AU, label: 'Length', what: d.lengthWhat || '', approx: true, look: 'region' } : null;
+      if (d.lengthMly > 0) return { r: d.lengthMly / 2 * 1e6 * LY_AU, label: 'Length', what: '', approx: true, look: 'region' };
+      return o.radiusAU > 0 ? { r: o.radiusAU, label: 'Extent', what: d.path ? 'as it is outlined in this map' : '', approx: true, look: 'region' } : null;
+    }
+  }
+  if (!(o.radiusAU > 0)) return null;
+  if (o.kind === 'blackhole') {                             /* 2.953 km of radius per solar mass: a figure worked out from the mass, so say so */
+    const m = d.massSuns || d.mass;
+    return { r: o.radiusAU, label: 'Event horizon', what: m ? 'worked out from its mass of ' + (m >= 1e9 ? fmtSuns(m) : m >= 1e6 ? Number((m / 1e6).toPrecision(2)) + ' million Suns' : m + ' Suns') : '', approx: true, look: 'bh' };
+  }
+  return { r: o.sizeR || o.radiusAU, label: 'Diameter', what: o.sizeApprox || o.sizeWhat || '', approx: !!o.sizeApprox,
+           look: (o.kind === 'star' || o.kind === 'sun') ? 'star' : o.kind === 'deepsky' ? 'glow' : 'ball' };
+}
+/* why a thing has no real size to show */
+function sizeWhy(o) {
+  const d = o.data || {};
+  if (o.sizeUnknown) return o.sizeUnknown;
+  if (o.kind === 'constellation') return o.name + ' is a region of the sky, not an object, so it has no size of its own.';
+  if (o.kind === 'deepfield') return theName(o, true) + ' is a patch of sky a telescope stared at. What it shows lies at every distance, so the patch has no single real size.';
+  if (o.kind === 'ngc') return 'This catalogue carries no distance for ' + o.name + ', so its real size cannot be worked out here.';
+  if (o.kind === 'probe') return 'No size is listed for ' + o.name + ' in this catalogue.';
+  if (o.kind === 'distant') return d.sizeNote || ('No size has been measured for ' + o.name + '.');
+  if (o.kind === 'region' && (o.armIndex != null || o.id === 'bar')) return o.id === 'arm-scutum'
+    ? 'Only parts of the ' + o.name + ' have measured distances, including one point beyond the galactic centre (2017). If the outer arm found in 2011 is its far end, the whole arm is nearly 200,000 light years long, but that link is not confirmed, so no length is shown.'
+    : 'No end-to-end length has been measured for the ' + o.name + ': only parts of it have measured distances, and most of the far side of the galaxy is still unmapped.';
+  return 'No size is known for ' + o.name + '.';
+}
+/* How big a thing looks from Earth: { am: width in arcminutes, area?: square degrees, label, text?, look }, or null. */
+function skyInfo(o) {
+  if (!o) return null;
+  const d = o.data || {};
+  if (o.kind === 'constellation') return { am: 2 * Math.sqrt(d.area / Math.PI) * 60, area: d.area, label: 'Area on the sky', text: d.area.toLocaleString() + ' square degrees', look: 'region' };
+  if (o.kind === 'deepfield') {
+    if (!(o.angArcmin > 0)) return null;
+    const w = d.arcmin, h = d.arcminH || d.arcmin;
+    return { am: Math.max(w, h), area: w * h / 3600, label: 'Field of view', text: d.arcminH ? w + ' × ' + h + ' arcminutes' : fmtArc(w), look: 'patch', ax: w / Math.max(w, h), ay: h / Math.max(w, h) };
+  }
+  if (o.kind === 'ngc') return o.angArcmin > 0 ? { am: o.angArcmin, label: 'Apparent size', what: 'longest side', look: 'glow' } : null;
+  if (o.kind === 'region' && (o.armIndex != null || o.id === 'bar')) return null;
+  const s = sizeInfo(o), e = byId.earth;
+  if (!s || !o.pos || o === e) return null;
+  const dist = Math.hypot(o.pos.x - e.pos.x, o.pos.y - e.pos.y, o.pos.z - e.pos.z);
+  if (!(dist > s.r * 1.02)) return null;                    /* we are on it or inside it */
+  /* a satellite of Earth is seen from the ground, not from Earth's centre: its range is its height above the surface */
+  const overhead = o.kind === 'probe' && (o.mode === 'gp' || o.mode === 'earthorbit');
+  const range = overhead ? dist - e.radiusAU : dist;
+  if (!(range > s.r)) return null;
+  const k = d.z > 0 ? 1 + d.z : 1;                          /* far across the universe, apparent size goes by the angular-diameter distance */
+  return { am: 2 * Math.atan(s.r * k / range) / DEG * 60, label: 'Apparent width', what: overhead ? 'seen from the ground directly below it' : s.label === 'Its black hole' ? 'of its black hole\'s event horizon' : '', look: s.look, live: true, approx: s.approx || overhead };
+}
+function skyWhy(o) {
+  if (o.id === 'earth') return 'Earth has no apparent size seen from Earth itself.';
+  if (o.kind === 'region' && (o.armIndex != null || o.id === 'bar')) return 'The ' + o.name + ' is part of our own galaxy seen from the inside, so it has no simple outline on the sky.';
+  if (o.kind === 'region' && o.category === 'belts') { const cfg = beltCfg(o); return 'The ' + o.name + (cfg && cfg.spherical ? ' surrounds the Sun and us on every side, so from Earth it covers the whole sky' : ' circles the Sun outside Earth\'s orbit, so from Earth it is a band right around the sky') + ' and has no width to measure.'; }
+  if (sizeInfo(o) && o.pos) return 'We are inside the ' + o.name + ', so it has no outline on the sky.';
+  return o.name + ' has no apparent size to set beside it.';
+}
+function compareMode(A, B) { return (sizeInfo(A) && sizeInfo(B)) ? 'real' : (skyInfo(A) && skyInfo(B)) ? 'sky' : null; }
+/* something sensible to put beside o when the Size button is pressed */
+function comparePartner(o) {
+  const s = sizeInfo(o);
+  const pick = function (ids) { for (let i = 0; i < ids.length; i++) if (ids[i] !== o.id && byId[ids[i]] && sizeInfo(byId[ids[i]])) return ids[i]; return o.id === 'earth' ? 'jupiter' : 'earth'; };
+  if (!s) return skyInfo(o) ? (o.id === 'moon' ? 'sun' : 'moon') : pick(['earth']);
+  if (s.look === 'craft') return pick(['sat0', 'hubble', 'jwst']);                 /* another spacecraft: the Space Station */
+  if (o.kind === 'neutron' || (o.kind === 'star' && (o.category === 'remnants' || (o.data && o.data.spec === 'D')))) return pick(['earth']);   /* dead stars are planet-sized or smaller */
+  if (s.look === 'bh') return s.r > 20 ? pick(['kuiperbelt', 'sun']) : s.r > 0.01 ? pick(['sun']) : pick(['earth']);
+  if (o.kind === 'star') return pick(['sun']);
+  if (o.kind === 'sun') return pick(['earth']);
+  if (o.kind === 'deepfield' || (o.kind === 'deepsky' && o.category !== 'galaxies')) return pick(['oortcloud', 'sun']);   /* nebulae and clusters: the whole Solar System, out to its comet cloud */
+  if (o.kind === 'deepsky' || o.kind === 'distant') return pick(['milkyway', 'm31']);
+  if (o.kind === 'region') return o.id === 'oortcloud' ? pick(['kuiperbelt']) : o.category === 'belts' ? pick(['earth']) : pick(['milkyway', 'localgroup']);
+  return pick(['earth']);
+}
 function renderCompare() {
   const box = $('compareResult'); if (!box) return;
   const A = byId[compare.a], B = byId[compare.b];
-  if (A && A === B) { box.innerHTML = '<div class="route-hint">Pick two different things to compare.</div>'; return; }
-  if (!sizable(A) || !sizable(B)) { box.innerHTML = '<div class="route-hint">Pick two things with a size — planets, moons, stars, black holes, galaxies, even the Local Group.</div>'; return; }
-  const big = A.radiusAU >= B.radiusAU ? A : B, small = big === A ? B : A;
-  const ratio = big.radiusAU / small.radiusAU, vol = Math.pow(ratio, 3);
-  const fmtN = function (v) { return v >= 1e12 ? (v / 1e12).toFixed(1) + ' trillion' : v >= 1e9 ? (v / 1e9).toFixed(1) + ' billion' : v >= 1e6 ? (v / 1e6).toFixed(1) + ' million' : v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(v >= 10 ? 1 : 2); };
+  if (!A || !B) { box.innerHTML = '<div class="route-hint">Pick two things to compare. Anything works: planets, moons, stars, spacecraft, nebulae, galaxies, black holes, even constellations.</div>'; return; }
+  if (A === B) { box.innerHTML = '<div class="route-hint">Pick two different things to compare.</div>'; return; }
+  const mode = compareMode(A, B);
+  if (!mode) {
+    const sa = sizeInfo(A), sb = sizeInfo(B), ka = skyInfo(A), kb = skyInfo(B);
+    let html = '';
+    if (!sa) html += '<div class="route-note about">' + esc(sizeWhy(A)) + '</div>';
+    if (!sb) html += '<div class="route-note about">' + esc(sizeWhy(B)) + '</div>';
+    const skyOnly = (ka && !sa) ? A : (kb && !sb) ? B : null;
+    if (skyOnly) html += '<div class="route-note about">' + esc(skyOnly.name + ' can still be compared by how big it looks from Earth. ' + skyWhy(skyOnly === A ? B : A) + ' Try the Moon, the Sun or the Andromeda Galaxy instead.') + '</div>';
+    else html += '<div class="route-hint">Pick something else to compare: planets, moons, stars, spacecraft, nebulae, galaxies and black holes all have sizes.</div>';
+    box.innerHTML = html; return;
+  }
+  const real = mode === 'real';
+  const ia = real ? sizeInfo(A) : skyInfo(A), ib = real ? sizeInfo(B) : skyInfo(B);
+  const va = real ? ia.r : ia.am / 2, vb = real ? ib.r : ib.am / 2;                 /* half-widths: AU, or arcminutes on the sky */
+  const big = va >= vb ? A : B, small = big === A ? B : A, ibig = big === A ? ia : ib, ismall = big === A ? ib : ia;
+  const ratio = Math.max(va, vb) / Math.min(va, vb), vol = Math.pow(ratio, 3);
+  const fmtN = function (v) { return v >= 1e18 ? fmtPow(v, true) : v >= 1e15 ? (v / 1e15).toFixed(1) + ' quadrillion' : v >= 1e12 ? (v / 1e12).toFixed(1) + ' trillion' : v >= 1e9 ? (v / 1e9).toFixed(1) + ' billion' : v >= 1e6 ? (v / 1e6).toFixed(1) + ' million' : v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(v >= 10 ? 1 : 2); };
+  const value = function (i) { return (i.approx ? '≈ ' : '') + (real ? fmtSize(i.r * 2, i.approx) : (i.text || fmtArc(i.am))); };
+  const under = function (i) { return i.label + (i.what ? ' · ' + i.what : ''); };
+  /* a telescope's close-up has a real width, but it is the width of the view, not of the thing in it */
+  const nameIn = function (o, cap) {
+    const i = o === A ? ia : ib;
+    if (real && o.kind === 'deepfield') return (cap ? 'The view of ' : 'the view of ') + theName(o);
+    if (i.label === 'Its black hole' || /black hole/.test(i.what || '')) return (cap ? 'The' : 'the') + ' black hole in ' + o.name;
+    return theName(o, cap);
+  };
   const cw = Math.max(240, box.clientWidth || 306), ch = Math.round(cw * 0.56), dpr = Math.min(window.devicePixelRatio || 1, 2);
   let html = '<canvas id="compareCanvas" width="' + Math.round(cw * dpr) + '" height="' + Math.round(ch * dpr) + '" style="height:' + ch + 'px"></canvas>';
-  html += '<table class="route-table"><tr><td>' + esc(A.name) + '<span>' + esc(sizeLabel(A)) + '</span></td><td>' + esc(fmtSize(A.radiusAU * 2)) + '</td></tr>' +
-          '<tr><td>' + esc(B.name) + '<span>' + esc(sizeLabel(B)) + '</span></td><td>' + esc(fmtSize(B.radiusAU * 2)) + '</td></tr></table>';
-  html += '<div class="route-best"><div class="route-best-title">Side by side</div>' +
-          (ratio < 1.05
-            ? '<p><strong>' + esc(big.name) + '</strong> and <strong>' + esc(small.name) + '</strong> are about the same size.</p>'
-            : '<p><strong>' + esc(big.name) + '</strong> is <strong>' + fmtN(ratio) + '×</strong> wider than ' + esc(small.name) + '.' +
-              (vol < 2 ? ' It has about <strong>' + vol.toFixed(1) + '×</strong> the volume.' : ratio < 1e5 ? ' About <strong>' + fmtN(vol) + '</strong> ' + esc(/s$/i.test(small.name) ? small.name : small.name + 's') + ' would fit inside it.' : '') + '</p>');
-  if (byId.earth && A !== byId.earth && B !== byId.earth) {
-    const eA = A.radiusAU / byId.earth.radiusAU, eB = B.radiusAU / byId.earth.radiusAU;
-    html += '<p class="dim">For scale: ' + esc(A.name) + ' is ' + fmtN(eA) + '× Earth, ' + esc(B.name) + ' is ' + fmtN(eB) + '× Earth.</p>';
+  html += '<table class="route-table"><tr><td>' + esc(A.name) + '<span>' + esc(under(ia)) + '</span></td><td>' + esc(value(ia)) + '</td></tr>' +
+          '<tr><td>' + esc(B.name) + '<span>' + esc(under(ib)) + '</span></td><td>' + esc(value(ib)) + '</td></tr></table>';
+  html += '<div class="route-best"><div class="route-best-title">' + (real ? 'Side by side' : 'As seen from Earth') + '</div>';
+  if (real) {
+    const round = function (i) { return i.look === 'ball' || i.look === 'star'; };
+    html += ratio < 1.05
+      ? '<p><strong>' + esc(nameIn(big, true)) + '</strong> and <strong>' + esc(nameIn(small)) + '</strong> are about the same size.</p>'
+      : '<p><strong>' + esc(nameIn(big, true)) + '</strong> is <strong>' + fmtN(ratio) + '×</strong> wider than ' + esc(nameIn(small)) + '.' +
+        (!(round(ia) && round(ib)) ? '' : vol < 2 ? ' It has about <strong>' + vol.toFixed(1) + '×</strong> the volume.'
+          : ratio >= 1e5 ? '' : /^(Earth|Moon|Sun|Jupiter|Mars|Venus|Mercury|Saturn|Uranus|Neptune|Pluto)$/.test(small.name) ? ' About <strong>' + fmtN(vol) + '</strong> ' + esc(/s$/.test(small.name) ? small.name : small.name + 's') + ' would fit inside it.'
+          : ' It has about <strong>' + fmtN(vol) + '×</strong> the volume.') + '</p>';
+    const E = byId.earth;
+    if (E && A !== E && B !== E) {
+      const eA = ia.r / E.radiusAU, eB = ib.r / E.radiusAU;
+      if (eA >= 0.01 && eB >= 0.01) html += '<p class="dim">For scale: ' + esc(nameIn(A)) + ' is ' + fmtN(eA) + '× Earth, ' + esc(nameIn(B)) + ' is ' + fmtN(eB) + '× Earth.</p>';
+    }
+    if (ia.approx || ib.approx) html += '<p class="dim">≈ marks a size that is estimated or has no sharp edge.</p>';
+  } else {
+    const area = function (i) { return i.area != null ? i.area : Math.PI * Math.pow(i.am / 120, 2); };      /* square degrees */
+    if (ia.area != null || ib.area != null) {
+      const ra = area(ia) >= area(ib) ? area(ia) / area(ib) : area(ib) / area(ia), bigA = area(ia) >= area(ib) ? A : B;
+      html += '<p><strong>' + esc(nameIn(bigA, true)) + '</strong> covers about <strong>' + fmtN(ra) + '×</strong> as much sky as ' + esc(nameIn(bigA === A ? B : A)) + '.</p>';
+    } else {
+      html += ratio < 1.05
+        ? '<p><strong>' + esc(nameIn(big, true)) + '</strong> and <strong>' + esc(nameIn(small)) + '</strong> look about the same size in the sky.</p>'
+        : '<p><strong>' + esc(nameIn(big, true)) + '</strong> looks <strong>' + fmtN(ratio) + '×</strong> wider in the sky than ' + esc(nameIn(small)) + '.</p>';
+    }
+    html += '<p class="dim">This compares how large they look from Earth, not how large they really are.' +
+            ((ia.live || ib.live) ? ' Apparent sizes change as things move: these are for the date on the clock.' : '') + '</p>';
+    const noReal = !sizeInfo(A) ? A : !sizeInfo(B) ? B : null;
+    if (noReal) html += '<p class="dim">' + esc(sizeWhy(noReal)) + '</p>';
   }
-  if (ratio > 40) html += '<p class="dim">At this scale ' + esc(small.name) + ' is a dot, so it is drawn with a magnified inset.</p>';
+  if (ratio > 40) html += '<p class="dim">At this scale ' + esc(nameIn(small)) + ' is a dot, so it is drawn with a magnified inset.</p>';
   html += '</div>';
   box.innerHTML = html;
-  drawCompare($('compareCanvas'), A, B, big, small, ratio, cw, ch, dpr);
+  drawCompare($('compareCanvas'), big, small, lookOf(big, ibig), lookOf(small, ismall), ratio, cw, ch, dpr);
 }
-function bodyLook(o) { return { color: o.color, color2: o.color2 || o.color, rings: o.rings ? o.rings.outerKm / (o.radiusAU * AU_KM) : 0, bh: o.kind === 'blackhole', region: o.kind === 'region', star: o.kind === 'star' || o.kind === 'sun' }; }
+function lookOf(o, info) {
+  return { kind: info.look || 'ball', color: o.color || '#cdd6ee', color2: o.color2 || o.color || '#cdd6ee', ax: info.ax || 1, ay: info.ay || 1,
+           rings: (info.look === 'ball' && o.rings) ? o.rings.outerKm / (o.radiusAU * AU_KM) : 0 };
+}
 function drawBall(g2, x, y, r, look) {
-  if (look.region) {
-    const gr = g2.createRadialGradient(x, y, r * 0.5, x, y, r); gr.addColorStop(0, hexA(look.color, 0.06)); gr.addColorStop(0.92, hexA(look.color, 0.35)); gr.addColorStop(1, hexA(look.color, 0));
-    g2.fillStyle = gr; g2.beginPath(); g2.arc(x, y, r, 0, TAU); g2.fill(); return;
+  const k = look.kind;
+  if (k === 'region' || k === 'glow') {
+    const gr = g2.createRadialGradient(x, y, k === 'glow' ? 0 : r * 0.5, x, y, r);
+    if (k === 'glow') { gr.addColorStop(0, hexA(look.color, 0.8)); gr.addColorStop(0.4, hexA(look.color, 0.32)); gr.addColorStop(1, hexA(look.color, 0.05)); }
+    else { gr.addColorStop(0, hexA(look.color, 0.06)); gr.addColorStop(0.92, hexA(look.color, 0.35)); gr.addColorStop(1, hexA(look.color, 0)); }
+    g2.fillStyle = gr; g2.beginPath(); g2.arc(x, y, r, 0, TAU); g2.fill();
+    if (k === 'glow') { g2.strokeStyle = hexA(look.color, 0.3); g2.lineWidth = 1; g2.beginPath(); g2.arc(x, y, Math.max(r - 0.5, 0.5), 0, TAU); g2.stroke(); }
+    return;
   }
-  if (look.bh) {
+  if (k === 'patch') {                                       /* a telescope's field of view */
+    const w = r * look.ax, h = r * look.ay;
+    g2.fillStyle = hexA(look.color, 0.16); g2.strokeStyle = hexA(look.color, 0.9); g2.lineWidth = 1.2;
+    g2.beginPath(); g2.rect(x - w, y - h, 2 * w, 2 * h); g2.fill(); g2.stroke(); return;
+  }
+  if (k === 'craft') {                                       /* a spacecraft: a body between two panels, its full span drawn to scale */
+    if (r < 1.5) { g2.fillStyle = '#dfe4ff'; g2.beginPath(); g2.arc(x, y, Math.max(r, 0.6), 0, TAU); g2.fill(); return; }
+    const bw = r * 0.46, bh = r * 0.5, gap = r * 0.07;
+    g2.fillStyle = '#6f86ff'; g2.fillRect(x - r, y - bh * 0.32, r - bw / 2 - gap, bh * 0.64); g2.fillRect(x + bw / 2 + gap, y - bh * 0.32, r - bw / 2 - gap, bh * 0.64);
+    g2.fillStyle = '#e6e9f5'; g2.fillRect(x - bw / 2, y - bh / 2, bw, bh);
+    g2.strokeStyle = 'rgba(255,255,255,0.25)'; g2.lineWidth = 1; g2.beginPath(); g2.moveTo(x - r, y + bh * 0.9); g2.lineTo(x + r, y + bh * 0.9); g2.stroke();
+    return;
+  }
+  if (k === 'bh') {
     const gr = g2.createRadialGradient(x, y, r, x, y, r * 1.35); gr.addColorStop(0, 'rgba(255,190,110,0.9)'); gr.addColorStop(1, 'rgba(255,190,110,0)');
     g2.fillStyle = gr; g2.beginPath(); g2.arc(x, y, r * 1.35, 0, TAU); g2.fill();
     g2.fillStyle = '#000'; g2.beginPath(); g2.arc(x, y, r, 0, TAU); g2.fill(); return;
   }
+  const star = k === 'star';
   if (look.rings > 1) {
     g2.save(); g2.translate(x, y); g2.scale(1, 0.28);
     g2.strokeStyle = hexA(look.color2, 0.55); g2.lineWidth = r * (look.rings - 1.28) ; g2.beginPath(); g2.arc(0, 0, r * (1.28 + look.rings) / 2, 0, TAU); g2.stroke(); g2.restore();
   }
   const gr = g2.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.05, x, y, r);
-  gr.addColorStop(0, look.star ? '#ffffff' : look.color); gr.addColorStop(0.6, look.color); gr.addColorStop(1, look.star ? look.color2 : 'rgba(0,0,0,0.85)');
+  gr.addColorStop(0, star ? '#ffffff' : look.color); gr.addColorStop(0.6, look.color); gr.addColorStop(1, star ? look.color2 : 'rgba(0,0,0,0.85)');
   g2.fillStyle = gr; g2.beginPath(); g2.arc(x, y, r, 0, TAU); g2.fill();
-  if (look.star) { const gl = g2.createRadialGradient(x, y, r, x, y, r * 1.5); gl.addColorStop(0, hexA(look.color, 0.5)); gl.addColorStop(1, hexA(look.color, 0)); g2.fillStyle = gl; g2.beginPath(); g2.arc(x, y, r * 1.5, 0, TAU); g2.fill(); }
+  if (star) { const gl = g2.createRadialGradient(x, y, r, x, y, r * 1.5); gl.addColorStop(0, hexA(look.color, 0.5)); gl.addColorStop(1, hexA(look.color, 0)); g2.fillStyle = gl; g2.beginPath(); g2.arc(x, y, r * 1.5, 0, TAU); g2.fill(); }
 }
-function drawCompare(cv, A, B, big, small, ratio, W2, H2, dpr) {
+function drawCompare(cv, big, small, bigLook, smallLook, ratio, W2, H2, dpr) {
   if (!cv) return;
   const g2 = cv.getContext('2d');
   g2.setTransform(dpr, 0, 0, dpr, 0, 0);
   g2.clearRect(0, 0, W2, H2);
   g2.fillStyle = '#07070b'; g2.fillRect(0, 0, W2, H2);
-  const lookA = bodyLook(A), lookB = bodyLook(B);
-  const bigLook = A === big ? lookA : lookB, smallLook = A === big ? lookB : lookA;
   let rBig = Math.min(H2 * 0.36, W2 * 0.26);
   if (bigLook.rings > 1) rBig = Math.min(rBig, W2 * 0.26 / bigLook.rings);
   const rSmall = Math.max(rBig / ratio, 0.6);
   const cx1 = W2 * 0.33, cx2 = W2 * 0.72, cy = H2 * 0.5;
-  const leftIsA = A === big;
-  drawBall(g2, cx1, cy, rBig, leftIsA ? lookA : lookB);
-  drawBall(g2, cx2, cy, rSmall, leftIsA ? lookB : lookA);
+  drawBall(g2, cx1, cy, rBig, bigLook);
+  drawBall(g2, cx2, cy, rSmall, smallLook);
   if (ratio > 40) {                                          /* inset for the speck */
     const ir = Math.round(H2 * 0.13) / Math.max(1, smallLook.rings), ix = cx2, iy = cy - H2 * 0.27;
     g2.strokeStyle = 'rgba(255,255,255,0.25)'; g2.lineWidth = 1; g2.beginPath(); g2.arc(ix, iy, ir + 6, 0, TAU); g2.stroke();
     g2.beginPath(); g2.moveTo(ix, iy + ir + 6); g2.lineTo(cx2, cy - rSmall - 2); g2.stroke();
-    drawBall(g2, ix, iy, ir, leftIsA ? lookB : lookA);
+    drawBall(g2, ix, iy, ir, smallLook);
     g2.fillStyle = 'rgba(255,255,255,0.55)'; g2.font = '500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; g2.textAlign = 'center';
-    g2.fillText('magnified ' + Math.round(ir * ratio / rBig).toLocaleString() + '×', ix, iy + ir + 22);
+    g2.fillText('magnified ' + fmtMag(ir * ratio / rBig) + '×', ix, iy + ir + 22);
   }
   g2.fillStyle = '#e8e8f0'; g2.font = '600 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; g2.textAlign = 'center';
-  g2.fillText(big.name, cx1, H2 - 12); g2.fillText(small.name, cx2, H2 - 12);
+  const fit = function (t, w) { if (g2.measureText(t).width <= w) return t; while (t.length > 4 && g2.measureText(t + '…').width > w) t = t.slice(0, -1); return t.replace(/\s+$/, '') + '…'; };
+  g2.fillText(fit(big.name, W2 * 0.6), cx1, H2 - 12); g2.fillText(fit(small.name, W2 * 0.36), cx2, H2 - 12);
 }
+function fmtMag(v) { return v >= 1e15 ? fmtPow(v) : v >= 1e12 ? (v / 1e12).toFixed(1) + ' trillion' : v >= 1e9 ? (v / 1e9).toFixed(1) + ' billion' : v >= 1e6 ? (v / 1e6).toFixed(1) + ' million' : Math.round(v).toLocaleString(); }
 function openCompare(aId, bId) {
   if (aId) compare.a = aId;
   if (bId) compare.b = bId;
@@ -4521,12 +4978,12 @@ function attachPicker(inputId, listId, which, accept, onPick) {
     if (!q) { list.classList.remove('show'); return; }
     let rows = objects.filter(function (o) { return accept(o) && o.name.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
     if (rows.length < 8) searchBulk(q, rows, 8);
-    rows = rows.filter(function (r) { return r.bulkRow ? !(accept === sizable && /^(sat|ngc)/.test(r.id)) : accept(r); });
+    rows = rows.filter(function (r) { return r.bulkRow || accept(r); });
     list.innerHTML = '';
     rows.forEach(function (r) {
       const div = document.createElement('div'); div.className = 'search-row';
       div.innerHTML = '<span class="dot" style="background:' + esc(r.color) + '"></span><span class="nm">' + esc(r.name) + '</span><span class="ty">' + esc(r.type) + '</span>';
-      div.addEventListener('click', function () { const o = r.bulkRow ? r.promote() : r; if (!accept(o)) { toast('No size known for ' + o.name); return; } (onPick || setRouteEnd)(which, o); list.classList.remove('show'); });
+      div.addEventListener('click', function () { const o = r.bulkRow ? r.promote() : r; (onPick || setRouteEnd)(which, o); list.classList.remove('show'); });
       list.appendChild(div);
     });
     list.classList.toggle('show', rows.length > 0);
@@ -4538,7 +4995,8 @@ function attachPicker(inputId, listId, which, accept, onPick) {
 /* the route drawn on the map */
 function drawRoute() {
   if (!route.open) return;
-  const pair = routePair(); if (!pair) return;
+  const R = routeStops(); if (!R.a) return;
+  const pair = [R.a, R.b];
   const pa = project(pair[0].pos), pb = project(pair[1].pos);
   if (!pa || !pb) return;
   ctx.save();
@@ -4630,19 +5088,23 @@ attachPicker('routeFrom', 'routeFromList', 'from');
 attachPicker('routeTo', 'routeToList', 'to');
 /* size comparison wiring */
 function setCompareEnd(which, o) { compare[which] = o.id; $(which === 'a' ? 'compareA' : 'compareB').value = o.name; renderCompare(); }
-attachPicker('compareA', 'compareAList', 'a', sizable, setCompareEnd);
-attachPicker('compareB', 'compareBList', 'b', sizable, setCompareEnd);
+attachPicker('compareA', 'compareAList', 'a', routable, setCompareEnd);
+attachPicker('compareB', 'compareBList', 'b', routable, setCompareEnd);
 $('btnComparePanel').addEventListener('click', function () {
   if (compare.open) closeCompare();
-  else if (selectedId && sizable(byId[selectedId])) openCompare(selectedId, selectedId === compare.b ? (selectedId === 'earth' ? 'jupiter' : 'earth') : null);
+  else if (selectedId && byId[selectedId]) {
+    /* keep what was on the other side if the two can be compared; otherwise pick a sensible partner */
+    const o = byId[selectedId], other = byId[compare.b];
+    openCompare(selectedId, (other && other !== o && compareMode(o, other)) ? null : comparePartner(o));
+  }
   else openCompare();
 });
 $('compareClose').addEventListener('click', closeCompare);
 $('compareSwap').addEventListener('click', function () { const t = compare.a; compare.a = compare.b; compare.b = t; openCompare(); });
-document.querySelectorAll('#compareQuick button').forEach(function (b) {
+document.querySelectorAll('#compareQuick button[data-id]').forEach(function (b) {
   b.addEventListener('click', function () { setCompareEnd('b', byId[b.getAttribute('data-id')]); });
 });
-$('btnCompare').addEventListener('click', function () { if (selectedId && sizable(byId[selectedId])) openCompare(selectedId, selectedId === 'earth' ? 'jupiter' : 'earth'); });
+$('btnCompare').addEventListener('click', function () { if (selectedId && byId[selectedId]) openCompare(selectedId, comparePartner(byId[selectedId])); });
 $('btnRoute').addEventListener('click', function () { if (selectedId) openRoute(selectedId === 'earth' ? 'sun' : 'earth', selectedId); });
 document.addEventListener('click', function (e) {
   if (!e.target.closest('.picker')) document.querySelectorAll('.picker-list').forEach(function (l) { l.classList.remove('show'); });
@@ -4859,7 +5321,7 @@ if (bulkSat && typeof FEATURED_SATELLITES !== 'undefined') {
   FEATURED_SATELLITES.forEach(function (pref) {
     const p = pref.toLowerCase();
     for (let k = 0; k < bulkSat.n; k++) {
-      if (bulkSat.lname[k].indexOf(p) === 0 && !taken[bulkSat.lname[k]]) { bulkSatObject(k); taken[bulkSat.lname[k]] = true; break; }
+      if (bulkSat.lname[k].indexOf(p) === 0 && !/[a-z]/.test(bulkSat.lname[k].charAt(p.length)) && !taken[bulkSat.lname[k]]) { bulkSatObject(k); taken[bulkSat.lname[k]] = true; break; }
     }
   });
 }
@@ -4879,151 +5341,412 @@ const DEEP_SHOTS_FN = {};
 const deepStore = {};
 function fmtYears(Y) {
   if (Y < 1e4) return Math.round(Y).toLocaleString() + (Math.round(Y) === 1 ? ' year' : ' years');
-  if (Y < 1e6) return Math.round(Y / 1e3).toLocaleString() + ' thousand years';
-  if (Y < 1e9) return (Y / 1e6).toFixed(Y < 1e7 ? 1 : 0) + ' million years';
-  if (Y < 1e12) return (Y / 1e9).toFixed(Y < 1e10 ? 2 : 0) + ' billion years';
-  if (Y < 1e15) return (Y / 1e12).toFixed(Y < 1e13 ? 1 : 0) + ' trillion years';
+  if (Y < 999500) return Math.round(Y / 1e3).toLocaleString() + ' thousand years';
+  if (Y < 9.995e8) return (Y / 1e6).toFixed(Y < 1e7 ? 1 : 0) + ' million years';
+  if (Y < 9.995e11) return (Y / 1e9).toFixed(Y < 1e10 ? 2 : 0) + ' billion years';
+  if (Y < 9.995e14) return (Y / 1e12).toFixed(Y < 1e13 ? 1 : 0) + ' trillion years';
   return null;                                        /* shown as a power of ten */
 }
-/* how long each catalogue star has left, from its colour and brightness */
-function massFromBV(bv) {
-  const T = [[-0.33, 20], [-0.2, 7], [-0.1, 4], [0, 2.5], [0.15, 1.9], [0.3, 1.5], [0.45, 1.25], [0.6, 1.05], [0.65, 1.0], [0.8, 0.9], [1.0, 0.78], [1.2, 0.68], [1.4, 0.6], [1.6, 0.45], [1.8, 0.3], [2.0, 0.18]];
-  if (bv <= T[0][0]) return T[0][1];
-  for (let i = 1; i < T.length; i++) if (bv <= T[i][0]) { const f = (bv - T[i - 1][0]) / (T[i][0] - T[i - 1][0]); return T[i - 1][1] + f * (T[i][1] - T[i - 1][1]); }
-  return 0.15;
+/* ---- how long each catalogue star lasts, and how old it is ----
+   Order-of-magnitude estimates from where a star sits on the colour-brightness diagram.
+   Masses and main-sequence brightness: Pecaut & Mamajek's table of dwarf stars. */
+function tableAt(T, x) {
+  if (x <= T[0][0]) return T[0][1];
+  for (let i = 1; i < T.length; i++) if (x <= T[i][0]) { const f = (x - T[i - 1][0]) / (T[i][0] - T[i - 1][0]); return T[i - 1][1] + f * (T[i][1] - T[i - 1][1]); }
+  return T[T.length - 1][1];
 }
-function msLife(m) { return m >= 0.5 ? 1e10 * Math.pow(m, -2.5) : 5.7e10 * Math.pow(0.5 / m, 3.2); }
-function starLives() {
+const MS_MASS_BV = [[-0.312, 20.2], [-0.301, 17.7], [-0.278, 11.8], [-0.215, 7.3], [-0.178, 5.4], [-0.156, 4.7], [-0.109, 3.38], [-0.07, 2.75], [0, 2.18], [0.07, 1.98], [0.16, 1.88], [0.21, 1.77], [0.295, 1.61], [0.37, 1.46], [0.44, 1.33], [0.486, 1.25], [0.53, 1.18], [0.595, 1.06], [0.65, 1.0], [0.73, 0.94], [0.816, 0.88], [0.884, 0.82], [0.99, 0.78], [1.09, 0.73], [1.15, 0.70], [1.34, 0.64], [1.42, 0.57]];
+const MS_MASS_MV = [[8.8, 0.57], [9.64, 0.50], [10.21, 0.44], [11.15, 0.37], [12.1, 0.27], [12.61, 0.23], [13.58, 0.184], [14.15, 0.162], [15.3, 0.123], [16.32, 0.102], [17.7, 0.09]];   /* red dwarfs: colour saturates, so use brightness */
+const MS_MV_BV = [[0.0, 0.99], [0.30, 2.57], [0.44, 3.37], [0.65, 4.80], [0.82, 5.78], [0.99, 6.50], [1.15, 7.28], [1.34, 8.16], [1.42, 8.80], [1.49, 9.64], [1.53, 11.15], [1.65, 12.61], [1.83, 14.15]];
+function massFromBV(bv) { return tableAt(MS_MASS_BV, bv); }
+function massFromMv(Mv) { return tableAt(MS_MASS_MV, Mv); }
+/* main-sequence lifetime in years for a star of m Suns. Red dwarfs after Laughlin, Bodenheimer & Adams 1997
+   (0.25 Suns: a trillion years; 0.08 Suns: about 12 trillion). */
+function msLife(m) {
+  if (m > 4) return 1.5625e8 * Math.pow(m / 4, -1.9);
+  if (m > 1) return 1e10 * Math.pow(m, -3);
+  if (m >= 0.5) return 1e10 * Math.pow(m, -2.5);
+  if (m >= 0.25) return 1e12 * Math.pow(0.25 / m, 4.15);
+  return 1e12 * Math.pow(0.25 / Math.max(m, 0.08), 2.18);
+}
+/* [years left, years since birth] for a star of absolute magnitude M and colour bv */
+function starClock(M, bv) {
+  if (M < -4) return [1e6, 1e7];                                      /* supergiants */
+  if (M > 10 && bv < 1.0) return [1e11, 3e9];                         /* white dwarfs: cooling embers */
+  if (bv > 0.5 && M < tableAt(MS_MV_BV, bv) - 1.5) return M < 2 ? [1e8, 2e9] : [1e9, 6e9];   /* giants and subgiants: well above the main sequence, most of life behind them */
+  const m = (M > 8.5 && bv > 1.3) ? massFromMv(M) : massFromBV(Math.min(bv, 1.42)), t = msLife(m);
+  const age = Math.min(0.5 * t, 5e9);                                 /* half way through, but no older than a typical star of the disc */
+  return [t - age, age];
+}
+function starTimes() {
   const S = bulkStars;
-  if (S.life) return S.life;
-  const L = new Float32Array(S.n);
+  if (S.life) return;
+  const L = new Float32Array(S.n), B = new Float32Array(S.n);
   for (let i = 0; i < S.n; i++) {
     const dpc = Math.max(Math.hypot(S.x[i], S.y[i], S.z[i]) / PC_AU, 1e-3);
-    const M = S.mag[i] * 0.01 - 5 * Math.log10(dpc) + 5, bv = S.ci[i] * 0.001;
-    let life;
-    if (M < -4) life = 1e6;                                  /* supergiants */
-    else if (bv > 0.75 && M < 1.2) life = 3e8;               /* giants: already old */
-    else life = msLife(massFromBV(bv)) * 0.5;                /* on average half way through */
-    L[i] = life;
+    const c = starClock(S.mag[i] * 0.01 - 5 * Math.log10(dpc) + 5, S.ci[i] * 0.001);
+    L[i] = c[0]; B[i] = c[1];
   }
-  S.life = L;
-  return L;
+  S.life = L; S.born = B;
 }
+function starLives() { starTimes(); return bulkStars.life; }
+function starAges() { starTimes(); return bulkStars.born; }
+const DEEP_MDWARF = { proxima: 0.122, barnard: 0.16, wolf359: 0.11, lalande: 0.39, trappist1: 0.09, lhs1140: 0.18, toi700: 0.42, k218: 0.50, kepler186: 0.54 };   /* measured masses in Suns; other red dwarfs fall back on radius, which is close to mass */
 function curatedLife(o) {
-  if (o.id === 'betelgeuse') return 1e5;
-  if (o.category === 'remnants') return 1e16;
+  if (o.id.indexOf('hyg') === 0) { starTimes(); return bulkStars.life[+o.id.slice(3)]; }   /* a catalogue star promoted by a search keeps its catalogue estimate */
+  if (o.id === 'betelgeuse') return 1e5;                    /* a placeholder at the early end of the estimates: see its chapter */
+  if (o.category === 'remnants') return 1e15;               /* not gone, just too cold and dark to see */
   const d = o.data || {}, r = d.rSun || 1, sp = (d.spec || 'G').charAt(0);
+  if (sp === 'D') return 1e15;                              /* already a white dwarf */
+  if (sp === 'O') return 3e6;
+  if (sp === 'B') return r > 15 ? 2e6 : r > 6 ? 2e7 : 1e8;
   if (r > 300) return 3e5;
-  if (r > 50) return 2e6;
-  if (r > 10) return 3e8;
-  return ({ O: 5e6, B: 1e8, A: 1e9, F: 4e9, G: 6e9, K: 2e10, M: 1e12 }[sp] || 6e9);
+  if (r > 60) return 2e6;                                   /* Canopus, Deneb */
+  if (r > 6) return (sp === 'F' || sp === 'A') ? 2e7 : 1e8; /* Polaris; Pollux, Capella, Arcturus, Aldebaran */
+  if (sp === 'F' && r > 1.8) return 5e8;
+  if (sp === 'M') return msLife(clamp(DEEP_MDWARF[o.id] || d.rSun || 0.2, 0.08, 0.6));   /* on the lower main sequence radius is close to mass */
+  return ({ A: 1e9, F: 4e9, G: 6e9, K: 2e10 }[sp] || 6e9);
 }
-function sunAt(Y) {
-  const T = SUN_TRACK;
-  if (Y >= T[T.length - 1][0]) return { r: T[T.length - 1][1], col: T[T.length - 1][2] };
-  for (let i = 1; i < T.length; i++) if (Y <= T[i][0]) {
+/* how the Sun looks at a moment on one of the tracks in data.js */
+function trackAt(T, Y) {
+  const n = T.length;
+  if (Y >= T[n - 1][0]) return { r: T[n - 1][1], col: T[n - 1][2], m: T[n - 1][3] || 1 };
+  for (let i = 1; i < n; i++) if (Y <= T[i][0]) {
     const f = (Y - T[i - 1][0]) / (T[i][0] - T[i - 1][0]);
     const r = Math.exp(lerp(Math.log(T[i - 1][1]), Math.log(T[i][1]), f));
     const c0 = parseInt(T[i - 1][2].slice(1), 16), c1 = parseInt(T[i][2].slice(1), 16);
     const ch = function (s) { return Math.round(lerp(c0 >> s & 255, c1 >> s & 255, f)); };
-    return { r: r, col: '#' + [ch(16), ch(8), ch(0)].map(function (v) { return v.toString(16).padStart(2, '0'); }).join('') };
+    return { r: r, col: '#' + [ch(16), ch(8), ch(0)].map(function (v) { return v.toString(16).padStart(2, '0'); }).join(''), m: lerp(T[i - 1][3] || 1, T[i][3] || 1, f) };
   }
-  return { r: 1, col: '#ffd977' };
+  return { r: 1, col: '#ffd977', m: 1 };
 }
+function sunAt(Y) { return trackAt(SUN_TRACK, Y); }
 function sunMaxRUpTo(Y) {
   let m = sunAt(Y).r;
   SUN_TRACK.forEach(function (k) { if (k[0] <= Y) m = Math.max(m, k[1]); });
   return m;
 }
-/* planets, moons and comets that no longer exist or move too fast to see */
+/* ---- the cosmology the timeline needs (same parameters as the rest of the app) ---- */
+const HAWKING_YR = 1.16e67;   /* black-hole lifetime in years x (mass in Suns)^3: photons and gravitons with Page's 1976 greybody factors.
+                                 The textbook blackbody formula 5120 pi G^2 M^3 / (hbar c^4) gives 2.1e67. */
+/* scale factor Y years from now (matter + dark energy; radiation no longer matters) */
+function futureScale(Y) {
+  const k = 1.5 * Math.sqrt(COSMO.OL) / COSMO.tH, x = k * (COSMO.age0 + Math.min(Y, 5e12) / 1e9);   /* the min() stops sinh overflowing */
+  return Math.cbrt(COSMO.Om / COSMO.OL) * Math.pow(Math.sinh(x), 2 / 3);
+}
+/* billion years until a galaxy now dGly billion light years away crosses our event horizon, if dark energy stays constant */
+function horizonExitGyr(dGly) {
+  if (dGly >= eventHorizonGly()) return 0;
+  const Ea = function (x) { const s = Math.exp(x); return Math.sqrt(COSMO.Or / (s * s * s * s) + COSMO.Om / (s * s * s) + COSMO.OL); };
+  let lo = 0, hi = 40;
+  for (let i = 0; i < 40; i++) {
+    const m = (lo + hi) / 2, chi = COSMO.dH * simpson(function (x) { return Math.exp(-x) / Ea(x); }, m, m + 40, 2000);
+    if (chi > dGly) lo = m; else hi = m;
+  }
+  return COSMO.tH * simpson(function (x) { return 1 / Ea(x); }, 0, lo, 2000);
+}
+/* age of the universe at redshift z, in billion years: integrated directly, so it stays exact at early times
+   (taking today's age minus the look-back time loses precision before about 2,000 years) */
+function ageAtZ(z) { const X = Math.log(1 + z); return COSMO.tH * simpson(function (x) { return 1 / cosmoE(Math.exp(x) - 1); }, X, X + 40, 4000); }
+/* how much a galaxy has dimmed and reddened from the extra stretch of space since today (1 = as now) */
+function horizonDim(o) {
+  if (o.dGly == null) o.dGly = Math.hypot(o.pos.x, o.pos.y, o.pos.z) / LY_AU / 1e9;
+  return 1 / Math.pow(1 + deep.zx * o.dGly, 2);
+}
+/* ---- one coordinate for all of time ----
+   x >= 0 : the future, x = log10(years from now)
+   x <  0 : the past. Down to 13.4 billion years ago, -x = log10(years ago). Earlier than
+            that the clock counts time since the Big Bang instead, one decade per unit,
+            down to 10^-36 seconds: otherwise the whole early universe would hide in the
+            last sliver of the scale. */
+const DEEP_AGE = COSMO.age0 * 1e9, DEEP_BACK1 = 1.34e10;
+const DEEP_P1 = Math.log10(DEEP_BACK1), DEEP_TC0 = Math.log10(DEEP_AGE - DEEP_BACK1);
+const DEEP_XMIN = -(DEEP_P1 + DEEP_TC0 + 43.5), DEEP_XMAX = 100.3;
+function deepXOfBack(back) { return back <= DEEP_BACK1 ? -Math.log10(back) : -(DEEP_P1 + DEEP_TC0 - Math.log10(DEEP_AGE - back)); }
+function deepXOfCosmic(tcYears) { return -(DEEP_P1 + DEEP_TC0 - Math.log10(tcYears)); }
+/* scale factor at a given time after the Big Bang (matter + radiation, exact while dark energy is negligible) */
+function scaleFactorAt(tcYears) {
+  const aEq = COSMO.Or / COSMO.Om, pre = 2 / (3 * Math.sqrt(COSMO.Om)) * COSMO.tH * 1e9 * Math.pow(aEq, 1.5);
+  let lo = -45, hi = 0;
+  for (let k = 0; k < 60; k++) {
+    const mid = (lo + hi) / 2, y = Math.pow(10, mid) / aEq;
+    /* for tiny y the bracket cancels badly; use its series y^2 * 3/4 there */
+    const br = y < 1e-4 ? 0.75 * y * y : (y - 2) * Math.sqrt(y + 1) + 2;
+    if (pre * br < tcYears) lo = mid; else hi = mid;
+  }
+  return Math.pow(10, (lo + hi) / 2);
+}
+/* temperature and size of the early universe.
+   After about 200 seconds T = 2.7255 K / a. Earlier, more kinds of particle shared the heat, so
+   T = C / sqrt(seconds) with C set by how many (g): 1.33e10 after electrons and positrons annihilate,
+   1.0e10 around one second, 6.4e9 above the quark transition, 5.6e9 with every known particle.
+   [log10 seconds, C in kelvin] */
+const EARLY_C = [[-11, 5.62e9], [-8, 5.93e9], [-5, 6.45e9], [-4.6, 8.86e9], [-4, 1.0e10], [0.5, 1.0e10], [2.3, 1.333e10]];
+function earlyState(tcYears) {
+  const tSec = tcYears * 3.15576e7;
+  if (tSec >= 200) { const a = scaleFactorAt(tcYears); return { a: a, T: 2.7255 / a }; }
+  const C = tableAt(EARLY_C, Math.log10(tSec)), T = C / Math.sqrt(tSec), g = Math.pow(1.807e10 / C, 4);
+  return { a: 2.7255 / T * Math.cbrt(3.909 / Math.max(g, 3.909)), T: T };
+}
+function deepSetX(x) {
+  x = clamp(x, DEEP_XMIN, DEEP_XMAX);
+  deep.x = x; deep.logY = x;
+  if (x >= 0) { deep.Y = Math.pow(10, x); deep.back = 0; deep.tc = DEEP_AGE; deep.cosmic = false; }
+  else {
+    deep.Y = 0;
+    const p = -x;
+    if (p <= DEEP_P1) { deep.back = Math.pow(10, p); deep.tc = DEEP_AGE - deep.back; deep.cosmic = false; }
+    else { deep.tc = Math.pow(10, DEEP_TC0 - (p - DEEP_P1)); deep.back = DEEP_AGE - deep.tc; deep.cosmic = true; }
+  }
+  if (deep.cosmic) { const s = earlyState(deep.tc); deep.a = s.a; deep.T = s.T; } else { deep.a = 1; deep.T = 2.7255; }
+}
+function deepSetLog(L) { deepSetX(L); }
+
+/* ---- chapters whose date the app works out for itself ---- */
+const DEEP_NOW_YEAR = (function () { const d = new Date(); return d.getUTCFullYear() + d.getUTCMonth() / 12 + d.getUTCDate() / 365.25; })();
+const PRECESSION_YR = 360 * 3600 / 50.28796;                 /* IAU 2006 general precession: one turn in 25,772 years */
+/* when Earth's wobbling axis points closest to a star: [years after J2000 (negative = before), how close in degrees].
+   The pole circles the pole of the ecliptic at a fixed tilt; good to about a degree within 10,000 years or so. */
+function poleStar(v, past) {
+  const lam = Math.atan2(v.y, v.x), bet = Math.asin(v.z / Math.hypot(v.x, v.y, v.z));
+  let d = ((Math.PI / 2 - lam) % TAU + TAU) % TAU;           /* the pole's ecliptic longitude is 90 degrees today and runs backward */
+  if (past) d -= TAU;
+  return [d / TAU * PRECESSION_YR, Math.abs(90 - OBLIQ / DEG - bet / DEG)];
+}
+/* the Sun's orbit of the galaxy: distance to the centre from the catalogue, circular speed from Reid et al. 2019 */
+const MW_ORBIT = (function () {
+  const p = byId.sgrA.pos, R0 = Math.hypot(p.x, p.y, p.z) / LY_AU, v = 236;
+  return { R0: R0, v: v, yr: TAU * R0 * 299792.458 / v };
+})();
+const DEEP_SN1054 = DEEP_NOW_YEAR - 1054.51;                 /* years since the supernova that left the Crab Nebula was seen */
+const DEEP_CALC = {
+  vega: function () { const p = poleStar(byId.vega.pos, false), yr = 2000 + p[0]; return { y: yr - DEEP_NOW_YEAR, vars: { year: (Math.round(yr / 100) * 100).toLocaleString('en-US'), deg: Math.round(p[1]) } }; },
+  thuban: function () { const p = poleStar(raDecToVec(14.0731, 64.3758, 1), true), yr = 2000 + p[0]; return { back: DEEP_NOW_YEAR - yr, vars: { bc: (Math.round((1 - yr) / 10) * 10).toLocaleString('en-US') } }; },
+  galyear: function () { return { y: MW_ORBIT.yr, vars: { circ: (Math.round(TAU * MW_ORBIT.R0 / 1000) * 1000).toLocaleString('en-US'), v: MW_ORBIT.v, myr: Math.round(MW_ORBIT.yr / 1e6) } }; },
+  galyearAgo: function () { return { back: MW_ORBIT.yr }; },
+  horizon: function () { return { y: horizonExitGyr(0.00313) * 1e9 }; },           /* the edge of the Local Group: 0.96 Mpc (Karachentsev et al. 2009) */
+  bh3: function () { return { y: HAWKING_YR * 27 }; },                             /* three Suns: about the lightest black hole a star can leave */
+  bhSgrA: function () { return { y: HAWKING_YR * Math.pow(byId.sgrA.data.massSuns, 3) }; },
+  accel: function () { const z = Math.cbrt(2 * COSMO.OL / COSMO.Om) - 1, lb = cosmo(z).lookback; return { back: lb * 1e9, vars: { gyr: lb.toFixed(1) } }; },
+  equality: function () { return { z: COSMO.Om / COSMO.Or - 1 }; },
+  darkages: function () { return { tc: 1e7, vars: { K: Math.round(earlyState(1e7).T / 10) * 10 } }; }
+};
+/* all chapters on the one axis */
+const DEEP_CH = [], DEEP_X = {};
+let DEEP_INTRO_FUTURE = null;
+function deepChapterX(c) {
+  let r = c;
+  if (c.fn) { r = DEEP_CALC[c.fn](); if (r.vars) c.text = c.text.replace(/\{(\w+)\}/g, function (m, k) { return r.vars[k]; }); }
+  if (r.log != null) return r.log;
+  if (r.y != null) return Math.log10(r.y);
+  if (r.year != null) return deepXOfBack(DEEP_NOW_YEAR - r.year);
+  if (r.back != null) return deepXOfBack(r.back);
+  if (r.z != null) { const tc = ageAtZ(r.z) * 1e9; return tc < DEEP_AGE - DEEP_BACK1 ? deepXOfCosmic(tc) : deepXOfBack(DEEP_AGE - tc); }
+  return deepXOfCosmic(r.tcSec != null ? r.tcSec / 3.15576e7 : r.tc);
+}
+DEEP_TIME.forEach(function (c) {
+  if (c.log === 0) { DEEP_INTRO_FUTURE = c; return; }
+  DEEP_CH.push({ id: c.id, x: c.id === 'dark' ? DEEP_XMAX : deepChapterX(c), tag: c.tag, title: c.title, text: c.text });
+});
+DEEP_PAST.forEach(function (c) { DEEP_CH.push({ id: c.id, x: c.id === 'begin' ? DEEP_XMIN : deepChapterX(c), tag: c.tag, title: c.title, text: c.text }); });
+DEEP_CH.push({ id: 'today', x: 0, tag: DEEP_TODAY.tag, title: DEEP_TODAY.title, text: DEEP_TODAY.text });
+DEEP_CH.sort(function (p, q) { return p.x - q.x; });
+DEEP_CH.forEach(function (c) { if (c.id) DEEP_X[c.id] = c.x; });
+
+/* published ages, in years, for things the rewind should switch off at the right moment */
+const DEEP_BORN = { betelgeuse: 9e6, siriusA: 2.4e8, siriusB: 2.4e8, vega: 4.5e8, m45: 1.15e8, m42: 2e6, betapic: 2.3e7, hr8799: 4e7, epseri: 6e8,
+                    alnilam: 6e6, mintaka: 6e6, alnitak: 6e6, rigel: 8e6, velapulsar: 1.1e4, geminga: 3.4e5 };
+const DEEP_SEEN = { casA: 1680, tychosnr: 1572.86, keplersnr: 1604.77, sn1987a: 1987.15 };   /* the year each explosion's light reached Earth */
+function curatedAge(o) {
+  if (o.id.indexOf('hyg') === 0) { starTimes(); return bulkStars.born[+o.id.slice(3)]; }
+  if (DEEP_BORN[o.id]) return DEEP_BORN[o.id];
+  if (o.category === 'remnants') return 1e9;
+  const d = o.data || {}, r = d.rSun || 1, sp = (d.spec || 'G').charAt(0);
+  if (sp === 'D') return 1e9;
+  if (sp === 'O') return 3e6;
+  if (sp === 'B') return r > 6 ? 1.5e7 : 5e7;
+  if (r > 300) return 1e7;
+  if (r > 60) return 2e7;
+  if (r > 6) return (sp === 'F' || sp === 'A') ? 7e7 : 2e9;
+  return ({ A: 4e8, F: 2e9, G: 4.6e9, K: 5e9, M: 5e9 }[sp] || 4.6e9);
+}
+const DEEP_SUB_AGE = { nebula: 5e6, planetary: 2e4, supernova: 2e4, open: 2e8, globular: 1.25e10 };
+const DEEP_SUB_LIFE = { planetary: 3e4, supernova: 1e5, nebula: 1e7, open: 3e8, globular: 3e10 };   /* nebulae disperse, clusters drift apart */
+
+/* planets, moons and comets that no longer exist (or do not exist yet) */
 function deepGone(o) {
+  if (deep.x < 0) {
+    const b = deep.back;
+    if (o.kind === 'moon' && o.id === 'moon') return b > 4.5e9;
+    if (o.id === 'earth') return b > 4.54e9;
+    return b > 4.56e9;                                      /* the planets formed within a few million years of the Sun */
+  }
   const Y = deep.Y;
-  if (Y > 1e15 && (o.kind === 'planet' || o.kind === 'dwarf' || o.kind === 'moon' || o.kind === 'exoplanet')) return true;   /* flung away by passing stars */
+  if (o.kind === 'exoplanet') {
+    /* passing stars strip planets from wider orbits first (Adams & Laughlin 1997), and none survives its star's death */
+    const a = o.aAU || 1; if (Y > Math.min(1e15, 1.3e15 / (a * a))) return true;
+    const h = o.parent && byId[o.parent];
+    if (h) { if (h.deepLife == null) h.deepLife = curatedLife(h); if (Y > h.deepLife) return true; }
+    return false;
+  }
+  /* the dead Sun's planets are shaken loose by passing stars within about 100 billion years (Zink, Batygin & Adams 2020) */
+  if (Y > 1e11 && (o.kind === 'planet' || o.kind === 'dwarf' || o.kind === 'moon')) return true;
   const host = o.kind === 'moon' ? byId[o.parent] : o;
   if (host && host.el && (host.kind === 'planet') && host.el.a * 215 < deep.sunMaxR * 1.02) return true;                    /* swallowed by the red giant */
   return false;
 }
-function deepHidden(o) {
-  const Y = deep.Y;
+function deepHiddenPast(o) {
+  const b = deep.back;
+  if (deep.cosmic) return true;                             /* before the first galaxies there is nothing in the catalogue to show */
   if (o.kind === 'probe' || o.category === 'satellites') return true;
   if (o.kind === 'planet' || o.kind === 'dwarf' || o.kind === 'moon' || o.kind === 'exoplanet') {
-    if (o.id === 'earth' && deep.shot === 'earth') return false;   /* the Earth chapter shows Earth itself */
+    if (o.kind === 'exoplanet') return true;
+    if (o.id === 'earth' && deep.shot === 'earth') return deepGone(o);
     return deepGone(o) || !!o.deepBlur;
   }
-  if (o.kind === 'sun') return Y > 1e16;
-  if (o.kind === 'star') { if (o.deepLife == null) o.deepLife = curatedLife(o); return Y > o.deepLife; }
-  if (o.kind === 'blackhole') { if (o.deepEvap == null) o.deepEvap = 2.1e67 * Math.pow((o.data && o.data.massSuns) || 10, 3); return Y > o.deepEvap; }
-  if (o.kind === 'neutron') return Y > 1e16;
+  if (o.kind === 'sun') return b > 4.6e9;
+  if (o.kind === 'star') { if (o.deepAge == null) o.deepAge = curatedAge(o); return b > o.deepAge; }
+  if (o.kind === 'blackhole') return b > (o.id === 'sgrA' ? 1.3e10 : 1e8);
+  if (o.kind === 'neutron') return b > (o.id === 'crabpulsar' ? DEEP_SN1054 : DEEP_BORN[o.id] || 1e6);
   if (o.kind === 'deepsky') {
-    if (o.category === 'galaxies') { if (o.id === 'm31') return deep.merge > 0.9; return o.lg ? Y > 8e9 : deep.horizonFade < 0.4; }   /* the satellites end up inside Milkomeda */
-    return Y > 1e8;                                         /* nebulae disperse, clusters drift apart */
+    if (o.category === 'galaxies') return deep.horizonFade < 0.4;
+    if (o.id === 'm1') return b > DEEP_SN1054;              /* the Crab Nebula is what was left by the supernova of 1054 */
+    if (DEEP_SEEN[o.id]) return b > DEEP_NOW_YEAR - DEEP_SEEN[o.id];
+    return b > (DEEP_BORN[o.id] || DEEP_SUB_AGE[o.sub] || 1e7);
   }
   if (o.kind === 'distant') return deep.horizonFade < 0.4;
   return false;
 }
-/* ---- the clock: ten times faster every second, pausing at each chapter ---- */
-function deepRate(L) {
-  const zones = [[7.0, 8.36, 0.3], [9.15, 9.65, 0.22], [9.74, 9.879, 0.07], [10.3, 11.18, 0.45],
-                 [20.5, 33.6, 3], [41, 66.5, 3.5], [68.5, 86.6, 3.5], [88, 99.8, 3.5]];
-  for (let i = 0; i < zones.length; i++) if (L >= zones[i][0] && L < zones[i][1]) return zones[i][2];
-  return 1;
+function deepHidden(o) {
+  if (deep.x < 0) return deepHiddenPast(o);
+  const Y = deep.Y;
+  if (o.kind === 'probe' || o.category === 'satellites') return true;
+  if (o.kind === 'planet' || o.kind === 'dwarf' || o.kind === 'moon' || o.kind === 'exoplanet') {
+    if (o.id === 'earth' && deep.shot === 'earth') return false;   /* the Earth chapters show Earth itself */
+    return deepGone(o) || !!o.deepBlur;
+  }
+  if (o.kind === 'sun') return Y > 1e15;                    /* a black dwarf: still there, too cold to see */
+  if (o.kind === 'star') { if (o.deepLife == null) o.deepLife = curatedLife(o); return Y > o.deepLife; }
+  if (o.kind === 'blackhole') { if (o.deepEvap == null) { const d = o.data || {}; o.deepEvap = HAWKING_YR * Math.pow(d.massSuns || d.mass || 10, 3); } return Y > o.deepEvap; }
+  if (o.kind === 'neutron') return Y > (o.id === 'psr1913' ? 3e8 : 1e15);   /* not gone, just too cold to see; the Hulse-Taylor pair merges in about 300 million years */
+  if (o.kind === 'deepsky') {
+    if (o.category === 'galaxies') {
+      if (o.id === 'm31') return deep.merge > 0.9;
+      if (o.id === 'lmc' || o.id === 'smc') return Y > 2e9;  /* the Large Magellanic Cloud merges with the Milky Way; the Small one is assumed to follow */
+      return o.lgBound ? Y > 3e11 : horizonDim(o) < 0.05;    /* the Local Group settles into one galaxy over 10^11 to 10^12 years (Adams & Laughlin 1997) */
+    }
+    return Y > (DEEP_SUB_LIFE[o.sub] || 1e8);
+  }
+  if (o.kind === 'distant') return horizonDim(o) < 0.05;
+  return false;
 }
-function deepSetLog(L) {
-  deep.logY = clamp(L, 0, 100.3);
-  deep.Y = Math.pow(10, deep.logY);
+/* ---- the clock: ten times faster (or slower) every second, pausing at each chapter ---- */
+const DEEP_ZONES = [
+  [7.0, DEEP_X.galyear, 0.3], [9.15, DEEP_X.m31, 0.2],
+  /* the Sun's last climb: slow enough to watch it swell and take the inner planets */
+  [DEEP_X.hydrogen + 0.005, DEEP_X.giant - 0.0057, 0.07], [DEEP_X.giant - 0.0057, DEEP_X.giant - 0.00064, 0.004],
+  [DEEP_X.giant - 0.00064, DEEP_X.giant, 0.0004], [DEEP_X.giant, DEEP_X.dwarf, 0.004],
+  [DEEP_X.oceans, 9.15, 0.1],                              /* stay with the dried-out Earth a moment */
+  [10.3, DEEP_X.empty, 0.45], [20.5, 33.8, 3], [41, DEEP_X.smallbh - 0.8, 3.5], [DEEP_X.smallbh + 1, DEEP_X.sgra - 0.66, 3.5], [DEEP_X.sgra + 1, 99.8, 3.5],
+  /* the past: the Solar System's first hundred million years, then the first billions of years of the galaxy */
+  [-9.6536, -9.60, 0.03], [-9.673, -9.6536, 0.004], [-10.127, -9.9, 0.12],
+  [deepXOfCosmic(1.5e-5), deepXOfCosmic(1.5e4), 2.2]        /* nothing new happens between the first minutes and the first light */
+];
+function deepRate(x) {
+  for (let i = 0; i < DEEP_ZONES.length; i++) if (x >= DEEP_ZONES[i][0] && x < DEEP_ZONES[i][1]) return DEEP_ZONES[i][2];
+  if (x < -(DEEP_P1 + DEEP_TC0 + 12)) return 2.6;          /* the first fraction of a second spans thirty orders of magnitude */
+  return 1;
 }
 function deepTick(dt) {
   deep.clock += dt;
   let rate = 0;
   if (deep.playing) {
-    if (deep.hold > 0) { deep.hold -= dt; rate = 0.012; }
-    else rate = deepRate(deep.logY);
-    const next = DEEP_TIME[deep.chapter + 1];
-    let L = deep.logY + rate * dt;
-    if (deep.hold > 0 && next) L = Math.min(L, next.log - 1e-4);   /* the slow drift during a pause never reaches the next chapter */
-    if (next && L >= next.log) {                             /* arrive at a chapter and dwell on it */
-      L = next.log; deep.chapter++;
-      const words = next.text.split(' ').length + next.title.split(' ').length;
-      deep.hold = clamp(1.6 + words * 0.13, 3, 6.5);
-      deepShowChapter();
+    const dir = deep.dir;
+    if (deep.hold > 0) { deep.hold -= dt; rate = deep.chapter < 0 ? 0.012 : 0; }   /* a true pause on each chapter; only the opening card keeps the planets moving */
+    else rate = deepRate(deep.x);
+    let ni = -1;
+    if (dir > 0) { for (let i = 0; i < DEEP_CH.length; i++) if (DEEP_CH[i].x > deep.x + 1e-9) { ni = i; break; } }
+    else { for (let i = DEEP_CH.length - 1; i >= 0; i--) if (DEEP_CH[i].x < deep.x - 1e-9) { ni = i; break; } }
+    const next = ni >= 0 ? DEEP_CH[ni] : null;
+    let x = deep.x + dir * rate * dt;
+    if (deep.hold <= 0) for (let i = 0; i < DEEP_ZONES.length; i++) {   /* land on the edge of a slow zone instead of stepping over it */
+      const z = DEEP_ZONES[i];
+      if (dir > 0 && deep.x < z[0] && x > z[0]) x = z[0];
+      else if (dir < 0 && deep.x >= z[1] && x < z[1]) x = z[1] - 1e-9;
     }
-    deepSetLog(L);
-    if (deep.chapter >= DEEP_TIME.length - 1 && deep.hold <= 0) { deep.playing = false; deepEnd(true); }
+    if (deep.hold > 0 && next) x = dir > 0 ? Math.min(x, next.x - 1e-4) : Math.max(x, next.x + 1e-4);
+    if (deep.hold <= 0 && next && (dir > 0 ? x >= next.x - 1e-9 : x <= next.x + 1e-9)) {     /* arrive at a chapter and dwell on it */
+      x = next.x; deep.chapter = ni;
+      const words = next.text.split(' ').length + next.title.split(' ').length;
+      deep.hold = clamp(1.6 + words * 0.13, 3, 9);
+      if (next.id === 'dwarf') deep.nebT0 = deep.clock;
+      deepShowChapter(next);
+    }
+    deepSetX(x);
+    if (deep.hold <= 0 && ((dir > 0 && deep.x >= DEEP_XMAX - 1e-6) || (dir < 0 && deep.x <= DEEP_XMIN + 1e-6))) { deep.playing = false; deepEnd(true); }
   }
-  deep.yrsPerSec = deep.Y * Math.LN10 * rate;
-  /* the planets really move for the first thousand years; after that they are rings */
-  simJd = deep.jd0 + Math.min(deep.Y, 1000) * 365.25;
+  const span = deep.x >= 0 ? deep.Y : deep.cosmic ? deep.tc : deep.back;
+  deep.yrsPerSec = span * Math.LN10 * rate;
+  /* the planets really move for a thousand years either way; beyond that they are rings */
+  simJd = deep.x >= 0 ? deep.jd0 + Math.min(Math.max(deep.Y - 1, 0), 1000) * 365.25 : deep.jd0 - Math.min(deep.back, 1000) * 365.25;
 }
 function deepWorld() {
-  const Y = deep.Y;
-  const yrsPerFrame = deep.yrsPerSec / 60;
+  const Y = deep.Y, past = deep.x < 0, b = deep.back;
+  const yrsPerFrame = deep.yrsPerSec / 60, span = past ? b : Y;
   objects.forEach(function (o) {
     if (o.kind !== 'planet' && o.kind !== 'dwarf' && o.kind !== 'moon') return;
     if (o.deepBlur) return;
     const P = o.el ? Math.pow(o.el.a, 1.5) : (o.periodDays ? o.periodDays / 365.25 : 1e9);
-    if (yrsPerFrame > P / 6 || Y > 1000) o.deepBlur = true;   /* sticky: once a ring, stays a ring */
+    if (yrsPerFrame > P / 6 || span > 1000) o.deepBlur = true;   /* sticky: once a ring, stays a ring */
   });
-  const s = sunAt(Y), sun = byId.sun;
+  const sun = byId.sun, e = byId.earth, m31 = byId.m31, c = MW ? MW.centre : null;
+  const toward = function (o, p0, s) { if (o && c) o.pos = { x: c.x + (p0.x - c.x) * s, y: c.y + (p0.y - c.y) * s, z: c.z + (p0.z - c.z) * s }; };
+  if (past) {
+    const s = trackAt(SUN_PAST, b);
+    sun.radiusAU = s.r * R_SUN_AU; sun.color = b < 5.7e8 ? deepStore.sun.col : s.col;
+    deep.sunMaxR = 1; deep.orbitK = 1; deep.zx = 0;
+    e.dry = false; e.plain = b > 2e7;                       /* the continents were somewhere else: no map */
+    if (b > 4.4e9) { e.color = '#d8562c'; e.color2 = '#5a1a08'; }                 /* a molten young Earth */
+    else if (b > 6.35e8 && b < 7.2e8) { e.color = '#e6eef4'; e.color2 = '#8fa3b5'; e.plain = true; }   /* Snowball Earth */
+    else { e.color = deepStore.earthColor; e.color2 = deepStore.earthColor2; }
+    deep.horizonFade = deep.cosmic ? 0 : b < 9e9 ? 1 : clamp(1 - (b - 9e9) / (DEEP_BACK1 - 9e9), 0, 1);
+    deep.galaxyFade = deep.cosmic ? 0 : b < 8e9 ? 1 : b < 1.2e10 ? lerp(1, 0.35, (b - 8e9) / 4e9) : clamp(0.35 * (1 - (b - 1.2e10) / (DEEP_BACK1 - 1.2e10)), 0, 0.35);
+    deep.merge = 0;
+    if (m31) m31.pos = deepStore.m31pos;
+    if (byId.lmc) byId.lmc.pos = deepStore.lmcpos;
+    if (byId.smc) byId.smc.pos = deepStore.smcpos;
+    return;
+  }
+  e.plain = Y > 5e7;
+  const s = sunAt(Y);
   sun.radiusAU = s.r * R_SUN_AU; sun.color = s.col;
   deep.sunMaxR = sunMaxRUpTo(Y);
-  const e = byId.earth;
-  if (Y > 1e9) { e.dry = true; e.color = '#a8805c'; e.color2 = '#5a3c24'; }
+  deep.orbitK = 1 / s.m;                                    /* as the Sun loses mass its planets' orbits widen in proportion */
+  if (deep.x >= DEEP_X.oceans - 1e-9) { e.dry = true; e.color = '#a8805c'; e.color2 = '#5a3c24'; }      /* the earliest estimate for the loss of the oceans */
   else { e.dry = false; e.color = deepStore.earthColor; e.color2 = deepStore.earthColor2; }
-  deep.horizonFade = Y < 2e10 ? 1 : clamp(1 - (Math.log10(Y) - 10.3) / 0.88, 0, 1);
+  /* the extra stretch of space since today: redshift gained per billion light years of today's distance */
+  const aF = futureScale(Y);
+  deep.zx = Math.max(0, aF * Math.sqrt(COSMO.Om / (aF * aF * aF) + COSMO.OL) - 1) / COSMO.dH;
+  deep.horizonFade = 1 / Math.pow(1 + deep.zx * 0.00313, 2);   /* the nearest galaxies outside the Local Group */
   deep.galaxyFade = Y < 1e12 ? 1 : Y < 1e14 ? lerp(1, 0.15, (Math.log10(Y) - 12) / 2) : clamp(0.15 * (1 - (Math.log10(Y) - 14) / 6), 0, 0.15);
-  deep.merge = clamp((Y - 4.9e9) / 1.6e9, 0, 1);
-  /* Andromeda falls toward us */
-  const m31 = byId.m31;
-  if (m31 && MW) {
-    const s2 = clamp(1 - Math.pow(Y / 4.9e9, 2), 0, 1), c = MW.centre, p0 = deepStore.m31pos;   /* first close pass about 4.5 billion years out, merged by about 6.5 */
-    m31.pos = { x: c.x + (p0.x - c.x) * s2, y: c.y + (p0.y - c.y) * s2, z: c.z + (p0.z - c.z) * s2 };
-  }
+  /* the Magellanic Clouds spiral in */
+  const sl = clamp(1 - Math.pow(Y / 2e9, 2), 0, 1);
+  toward(byId.lmc, deepStore.lmcpos, sl); toward(byId.smc, deepStore.smcpos, sl);
+  /* Andromeda falls toward us: a first pass about 5 billion years out (130 kpc on the best-fit orbit), a swing back out,
+     then, on the branch where the two galaxies merge, a final fall by about 7.5 billion years. Illustrative path. */
+  const P = 5e9, M = 7.5e9;
+  let s2;
+  if (Y <= P) s2 = 1 - 0.83 * Math.pow(Y / P, 2);
+  else { const u = clamp((Y - P) / (M - P), 0, 1); s2 = 0.17 * (1 + 1.5 * Math.sin(Math.PI * u)) * (1 - u * u); }
+  toward(m31, deepStore.m31pos, s2);
+  deep.merge = clamp((Y - 6.5e9) / 2e9, 0, 1);
 }
 /* ---- the guided camera ---- */
 function deepShot(name) {
   const Y = deep.Y, t = deep.clock;
   const ang = function (yaw, pitch) { return { yaw: yaw, pitch: pitch, roll: 0 }; };
   if (name === 'solar') return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 48 }, ang(-1.05 + 0.04 * t, 0.5));
+  if (name === 'nursery') return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 120 }, ang(-1.05 + 0.03 * t, 0.42));
   if (name === 'solarWide') return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 7.5 }, ang(-1.05 + 0.05 * t, 0.55));
   if (name === 'earth') { const e = byId.earth; const v = sunlitAngles(e) || { yaw: 0, pitch: 0.3 }; return Object.assign({ pos: { x: e.pos.x, y: e.pos.y, z: e.pos.z }, dist: frameDistance(e.radiusAU, 0.3) }, ang(v.yaw, v.pitch)); }
   if (name === 'orion') {
@@ -5035,10 +5758,18 @@ function deepShot(name) {
   }
   if (name === 'galaxy') {
     const v = MW.obj.view, F = camFrame(v.yaw, v.pitch, 0);
-    const th = TAU * Math.min(Y, 2.3e8) / 2.3e8 + 0.015 * t;  /* the camera circles the galaxy's axis, so the galaxy appears to turn */
+    const gy = MW_ORBIT.yr, th = (deep.x < 0 ? -TAU * Math.min(deep.back, gy) / gy : TAU * Math.min(Y, gy) / gy) + 0.015 * t;  /* the camera circles the galaxy's axis, so the galaxy appears to turn */
     const d = rotateAbout(F.d, MW.ez, th), u = rotateAbout(F.up, MW.ez, th);
     const e = camAngles(d, u, v.yaw);
     return { pos: { x: MW.centre.x, y: MW.centre.y, z: MW.centre.z }, dist: objectViewDistance(MW.obj) * 1.1, yaw: e.yaw, pitch: e.pitch, roll: e.roll };
+  }
+  if (name === 'halo') {                                    /* the Milky Way with its companions around it */
+    const v = MW.obj.view;
+    return { pos: { x: MW.centre.x, y: MW.centre.y, z: MW.centre.z }, dist: objectViewDistance(MW.obj) * 3.4, yaw: v.yaw + 0.012 * t, pitch: v.pitch, roll: 0 };
+  }
+  if (name === 'taurus') {                                  /* the sky from just beyond the Sun, looking toward the Crab Nebula */
+    const m = byId.m1.pos, R = Math.hypot(m.x, m.y, m.z);
+    return Object.assign({ pos: { x: m.x / R * 300, y: m.y / R * 300, z: m.z / R * 300 }, dist: 150 }, ang(Math.atan2(-m.y, -m.x), Math.asin(clamp(-m.z / R, -1, 1))));
   }
   if (name === 'lg') {
     const c = MW.centre, m = byId.m31.pos, sep = Math.hypot(m.x - c.x, m.y - c.y, m.z - c.z);
@@ -5050,12 +5781,29 @@ function deepShot(name) {
   return Object.assign({ pos: { x: 0, y: 0, z: 0 }, dist: 48 }, ang(-1.05, 0.42));
 }
 function deepShotName() {
+  if (deep.x < 0) {
+    const b = deep.back;
+    if (deep.cosmic || b > 1.02e10) return 'cosmos';
+    if (b < 700) return 'solar';
+    if (b < 1300) return 'taurus';
+    if (b < 5e4) return 'earth';
+    if (b < 1.5e5) return 'solar';
+    if (b < 4e5) return 'earth';
+    if (b < 1.2e7) return 'orion';
+    if (b < 1.2e8) return 'earth';
+    if (b < 4.2e8) return 'galaxy';
+    if (b < 4.53e9) return 'earth';
+    if (b < 4.75e9) return 'nursery';
+    if (b < 7e9) return 'cosmos';
+    return 'galaxy';
+  }
   const L = deep.logY;
   if (L < 4.3) return 'solar';
   if (L < 6.6) return 'orion';
   if (L < 8.6) return 'galaxy';
   if (L < 9.15) return 'earth';
-  if (L < 9.7) return 'lg';
+  if (L < DEEP_X.lmc + 0.03) return 'halo';
+  if (L < DEEP_X.m31 + 0.015) return 'lg';
   if (L < 10.3) return 'solarWide';
   if (L < 11.6) return 'cosmos';
   if (L < 30) return 'galaxy';
@@ -5091,28 +5839,119 @@ function deepCamera(dt) {
   cam.fov = cam.fovGoal = FOV_DEFAULT;
 }
 /* ---- what the renderer cannot show by itself ---- */
+const deepMottle = (function () { const r = mulberry32(1380), out = []; for (let k = 0; k < 150; k++) out.push({ u: r(), v: r(), s: 0.05 + r() * 0.16, d: r() < 0.5 ? -1 : 1 }); return out; })();
+const deepDawn = (function () { const r = mulberry32(290), out = []; for (let k = 0; k < 110; k++) out.push({ u: r(), v: r(), t: r(), s: 0.6 + r() * 1.6 }); return out; })();
+/* the colour of a glowing gas at a given temperature */
+function tempColor(T) {
+  const S = [[800, [120, 20, 0]], [1500, [255, 80, 10]], [3000, [255, 160, 70]], [4500, [255, 215, 160]], [6500, [255, 250, 244]], [10000, [205, 220, 255]], [30000, [170, 195, 255]], [1e7, [215, 228, 255]], [1e10, [255, 255, 255]]];
+  if (T <= S[0][0]) return S[0][1];
+  for (let i = 1; i < S.length; i++) if (T <= S[i][0]) { const f = (Math.log(T) - Math.log(S[i - 1][0])) / (Math.log(S[i][0]) - Math.log(S[i - 1][0])); return S[i][1].map(function (v, k) { return Math.round(lerp(S[i - 1][1][k], v, f)); }); }
+  return [255, 255, 255];
+}
+const deepSiblings = (function () { const r = mulberry32(4567), out = []; for (let k = 0; k < 90; k++) { const z = 2 * r() - 1, ph = r() * TAU, q = Math.sqrt(1 - z * z); out.push({ x: q * Math.cos(ph), y: q * Math.sin(ph), z: z, s: 0.5 + r() * 1.8, c: r() < 0.25 ? '170,200,255' : r() < 0.6 ? '255,240,220' : '255,190,140' }); } return out; })();
+function deepOverlayPast() {
+  const b = deep.back, lb = Math.log10(Math.max(b, 1));
+  ctx.save();
+  if (deep.cosmic || b > 1.2e10) {
+    /* cosmic dawn: the first stars and galaxies switch on, a few at a time */
+    const ramp = deep.cosmic ? 1 : clamp((b - 1.2e10) / (DEEP_BACK1 - 1.2e10), 0, 1);
+    const ltc = Math.log10(deep.tc), dawn = clamp((ltc - 8.0) / 0.9, 0, 1) * ramp;
+    if (dawn > 0.01) {
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < deepDawn.length; k++) {
+        const d = deepDawn[k]; if (d.t > dawn) continue;
+        const al = clamp((dawn - d.t) * 6, 0, 1) * ramp;
+        glow({ x: d.u * W, y: d.v * H }, 5 + d.s * 5, 'rgb(190,210,255)', 0.55 * al);
+        ctx.fillStyle = 'rgba(235,242,255,' + (0.9 * al).toFixed(3) + ')'; ctx.fillRect(d.u * W - d.s / 2, d.v * H - d.s / 2, d.s, d.s);
+      }
+    }
+  }
+  if (deep.cosmic) {
+    /* the young universe glows like the surface of a star: the hotter, the whiter.
+       (Above a few tens of thousands of kelvin the true colour no longer changes, and above a
+       billion the light is gamma rays, so the white there is symbolic.) */
+    const T = deep.T, al = clamp((Math.log10(T) - 2.6) / 0.75, 0, 1) * 0.9;
+    if (al > 0.005) {
+      const c = tempColor(T);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = 'rgba(' + c.join(',') + ',' + al.toFixed(3) + ')'; ctx.fillRect(0, 0, W, H);
+      /* faint clumps: the seeds of every later galaxy */
+      const tex = 0.085 * al * clamp(1.6 - (Math.log10(T) - 3.4) / 3, 0.25, 1), m = Math.max(W, H);
+      for (let k = 0; k < deepMottle.length; k++) {
+        const q = deepMottle[k], x = ((q.u + deep.clock * 0.004 * q.d) % 1 + 1) % 1 * W, y = q.v * H, r = q.s * m;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r), col = q.d > 0 ? '255,255,255' : '0,0,0';
+        g.addColorStop(0, 'rgba(' + col + ',' + tex.toFixed(3) + ')'); g.addColorStop(1, 'rgba(' + col + ',0)');
+        ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      const vg = ctx.createRadialGradient(W / 2, H / 2, m * 0.2, W / 2, H / 2, m * 0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,' + (0.28 * al).toFixed(3) + ')');
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    }
+    ctx.restore(); return;
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  /* the supernova of 1054 that left the Crab Nebula (it stayed visible for nearly two years; the flash here lasts longer so it can be seen) */
+  const m1 = byId.m1, sn = DEEP_SN1054;
+  if (m1 && b > sn - 92 && b < sn + 38) {
+    const q = project(m1.pos);
+    if (q) { const f = b <= sn ? clamp((b - (sn - 92)) / 92, 0, 1) : clamp(1 - (b - sn) / 38, 0, 1); glow(q, 14 + 70 * f, 'rgb(225,236,255)', 0.9 * f); glow(q, 6 + 16 * f, 'rgb(255,255,255)', f); }
+  }
+  /* giant impacts on Earth: the asteroid 66 million years ago, and the collision that made the Moon */
+  const ep = byId.earth && byId.earth.screen, pulse = 0.7 + 0.3 * Math.sin(deep.clock * 3.2);
+  [[6.6e7, 0.045, '255,220,160'], [4.5e9, 0.0012, '255,190,120']].forEach(function (im) {
+    const d = Math.abs(lb - Math.log10(im[0]));
+    if (ep && d < im[1]) { const f = (1 - d / im[1]) * pulse; const r = (byId.earth.radiusAU / ep.z) * focal; glow({ x: ep.x + r * 0.3, y: ep.y - r * 0.2 }, r * (0.35 + 0.8 * f), 'rgb(' + im[2] + ')', 0.9 * f); }
+  });
+  /* the disc of gas and dust the planets formed from: it lasted only a few million years */
+  if (b > 4.555e9 && b < 4.575e9) {
+    const c = project({ x: 0, y: 0, z: 0 }), R = 45;
+    const pu = project({ x: 1, y: 0, z: 0 }), pv = project({ x: 0, y: 1, z: 0 });   /* a 1 AU yardstick: 45 AU would fall behind the camera */
+    if (c && pu && pv) {
+      const al = b < 4.567e9 ? clamp((b - 4.555e9) / 1e7, 0, 1) : clamp(1 - (b - 4.5705e9) / 4.5e6, 0, 1);
+      ctx.save(); ctx.transform((pu.x - c.x) * R, (pu.y - c.y) * R, (pv.x - c.x) * R, (pv.y - c.y) * R, c.x, c.y);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      g.addColorStop(0, 'rgba(255,225,170,' + (0.75 * al).toFixed(3) + ')'); g.addColorStop(0.12, 'rgba(255,170,95,' + (0.42 * al).toFixed(3) + ')');
+      g.addColorStop(0.55, 'rgba(190,105,60,' + (0.18 * al).toFixed(3) + ')'); g.addColorStop(1, 'rgba(120,60,40,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 1, 0, TAU); ctx.fill(); ctx.restore();
+    }
+  }
+  /* the Sun's birth cluster: sibling stars all around. An illustration; where they really were is not known. */
+  if (b > 4.566e9 && b < 4.75e9) {
+    const al = clamp((b - 4.566e9) / 2e6, 0, 1) * clamp((4.75e9 - b) / 1e8, 0, 1);
+    for (let k = 0; k < deepSiblings.length; k++) {
+      const d = deepSiblings[k], q = project({ x: d.x * 6e4, y: d.y * 6e4, z: d.z * 6e4 });
+      if (!q) continue;
+      glow(q, 3 + d.s * 4, 'rgb(' + d.c + ')', 0.5 * al);
+      ctx.fillStyle = 'rgba(' + d.c + ',' + (0.95 * al).toFixed(3) + ')'; ctx.fillRect(q.x - d.s / 2, q.y - d.s / 2, d.s, d.s);
+    }
+  }
+  ctx.restore();
+}
 function deepOverlay() {
+  if (deep.x < 0) { deepOverlayPast(); return; }
   const L = deep.logY;
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  /* Betelgeuse's supernova */
-  const bet = byId.betelgeuse;
-  if (bet && L >= 4.995 && L < 5.45) {
+  /* Betelgeuse's supernova. Not to scale in time: the real one fades within a couple of years. */
+  const bet = byId.betelgeuse, bx = DEEP_X.betel - 0.005;
+  if (bet && L >= bx && L < bx + 0.455) {
     const q = project(bet.pos);
-    if (q) { const f = 1 - (L - 4.995) / 0.455; glow(q, 30 + 160 * f, 'rgb(220,235,255)', 0.9 * f); glow(q, 10 + 40 * f, 'rgb(255,255,255)', f); }
+    if (q) { const f = 1 - (L - bx) / 0.455; glow(q, 30 + 160 * f, 'rgb(220,235,255)', 0.9 * f); glow(q, 10 + 40 * f, 'rgb(255,255,255)', f); }
   }
-  /* the Sun's planetary nebula */
-  if (deep.Y > 7.72e9 && deep.Y < 8.8e9) {
+  /* the Sun's planetary nebula: it lasts some ten thousand years, far too brief for this clock, so it is shown
+     while the white-dwarf chapter is on screen. Its size is not to scale. */
+  if (deep.Y >= 7.72e9 && deep.Y < 7.74e9) {
     const q = project({ x: 0, y: 0, z: 0 });
     if (q) {
-      const f = (deep.Y - 7.72e9) / 1.08e9, rAU = 1.5 + 9 * Math.sqrt(f), rp = (rAU / q.z) * focal, al = 0.55 * (1 - f);
+      const f = (deep.playing && deep.nebT0 != null) ? clamp((deep.clock - deep.nebT0) / 8, 0, 1) : 0.3;
+      const rAU = 1.5 + 9 * Math.sqrt(f), rp = (rAU / q.z) * focal, al = 0.55 * (1 - f);
       const g = ctx.createRadialGradient(q.x, q.y, rp * 0.6, q.x, q.y, rp);
       g.addColorStop(0, 'rgba(90,200,210,0)'); g.addColorStop(0.75, 'rgba(90,200,210,' + (al * 0.6).toFixed(3) + ')');
       g.addColorStop(0.93, 'rgba(255,120,150,' + al.toFixed(3) + ')'); g.addColorStop(1, 'rgba(255,120,150,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(q.x, q.y, rp, 0, TAU); ctx.fill();
     }
   }
-  /* Milkomeda: the merged galaxy settles into a smooth elliptical glow */
+  /* Milkomeda: on the branch where the two galaxies merge, they settle into a smooth elliptical glow */
   if (deep.merge > 0 && MW && deep.galaxyFade > 0.01) {
     const q = project(MW.centre);
     if (q) {
@@ -5127,37 +5966,88 @@ function deepOverlay() {
           ctx.globalCompositeOperation = 'source-over';
           ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; ctx.textAlign = 'center';
           ctx.fillStyle = 'rgba(255,225,190,' + (0.8 * Math.min(1, deep.galaxyFade * 2)).toFixed(2) + ')';
-          ctx.fillText('Milkomeda', q.x, q.y - rp * 0.78 - 8);
+          ctx.fillText('Milkomeda (if they merge)', q.x, q.y - rp * 0.78 - 8);
           ctx.globalCompositeOperation = 'lighter';
         }
       }
     }
   }
-  /* Sagittarius A* evaporates in a last flash */
+  /* a black hole with Sagittarius A*'s present mass evaporates in a last flash */
   const s = byId.sgrA;
-  if (s && L >= 87.2 && L < 87.7) {
+  if (s && L >= DEEP_X.sgra && L < DEEP_X.sgra + 0.5) {
     const q = project(s.pos);
-    if (q) { const f = 1 - (L - 87.2) / 0.5; glow(q, 40 + 260 * f, 'rgb(255,240,220)', f); }
+    if (q) { const f = 1 - (L - DEEP_X.sgra) / 0.5; glow(q, 40 + 260 * f, 'rgb(255,240,220)', f); }
   }
   ctx.restore();
 }
 /* ---- the readout ---- */
-const DEEP_TAGS = { calc: 'Calculated', pred: 'Predicted', spec: 'Speculative' };
+const DEEP_TAGS = { meas: 'Measured', calc: 'Calculated', pred: 'Predicted', model: 'From models', spec: 'Speculative' };
+/* 3 x 10^19 rather than a bare power of ten, which would be up to ten times off */
+function fmtPow(v, html) {
+  let e = Math.floor(Math.log10(v)), m = Math.round(v / Math.pow(10, e));
+  if (m >= 10) { m = 1; e++; }
+  const p = html ? '10<sup>' + String(e).replace('-', '−') + '</sup>' : '10^' + e;
+  return m === 1 ? p : m + ' × ' + p;
+}
+function fmtCosmicTime(tc) {
+  if (tc >= 1) return fmtYears(tc) || '';
+  const s = tc * 3.15576e7 * (1 + 1e-9);                    /* a hair of slack, so exactly one second does not read as 1000 milliseconds */
+  if (s >= 172800) return Math.round(s / 86400) + ' days';
+  if (s >= 7200) return Math.round(s / 3600) + ' hours';
+  if (s >= 120) return Math.round(s / 60) + ' minutes';
+  if (s >= 1) return Math.round(s) + (Math.round(s) === 1 ? ' second' : ' seconds');
+  if (s >= 1e-3) return Math.round(s * 1000) + (Math.round(s * 1000) === 1 ? ' millisecond' : ' milliseconds');
+  return fmtPow(s, true) + ' seconds';
+}
+function fmtTemp(T) {
+  if (T < 1e4) return Math.round(T / 10) * 10 + ' K';
+  if (T < 1e6) return Math.round(T / 1000).toLocaleString() + ' thousand K';
+  const two = function (v) { return v >= 100 ? String(Math.round(v / 10) * 10) : v >= 10 ? String(Math.round(v)) : v.toFixed(1); };   /* two significant figures */
+  if (T < 9.95e8) return two(T / 1e6) + ' million K';
+  if (T < 9.95e11) return two(T / 1e9) + ' billion K';
+  return fmtPow(T, true) + ' K';
+}
 function deepHud() {
-  const Y = deep.Y, t = fmtYears(Y);
-  $('deepWhen').innerHTML = '+' + (t ? esc(t) : '10<sup>' + Math.floor(deep.logY) + '</sup> years');
-  const yr = Math.round(deep.year0 + Y);
-  $('deepSub').textContent = Y < 1e6 ? 'Year ' + (yr < 10000 ? String(yr) : yr.toLocaleString()) : 'from today';
+  const Y = deep.Y;
+  let sub;
+  if (deep.x >= 0) {
+    const now = deep.x === 0, t = fmtYears(Y);
+    $('deepWhen').innerHTML = now ? 'Today' : '+' + (t ? esc(t) : fmtPow(Y, true) + ' years');
+    const yr = Math.floor(deep.year0 + (now ? 0 : Y));
+    sub = Y < 1e6 ? 'Year ' + (yr < 10000 ? String(yr) : yr.toLocaleString())
+      : Y < 1e14 ? 'from today · stars shown are today\'s; new ones are not drawn' : 'from today';
+  } else if (!deep.cosmic) {
+    const b = deep.back, yr = Math.floor(deep.year0 - b + 1e-6);
+    $('deepWhen').innerHTML = '−' + esc(fmtYears(b));
+    sub = b < 2e4 ? (yr > 0 ? 'Year ' + yr : (1 - yr).toLocaleString() + ' BC')
+      : b < 1e6 ? 'before today'
+      : b < 1e9 ? 'before today · stars shown are today\'s, each back to its birth'
+      : 'before today · the universe is ' + fmtYears(deep.tc) + ' old';
+  } else {
+    $('deepWhen').innerHTML = fmtCosmicTime(deep.tc);
+    if (deep.tc * 3.15576e7 < 1e-30) sub = 'after the Big Bang, by convention · nothing this early has been measured';
+    else {
+      /* the region that grew into everything we can see today (the whole universe may be far larger) */
+      const size = 2 * COSMO.horizon * 1e9 * deep.a;
+      const sz = size >= 1 ? fmtDist(size * LY_AU) : size * 9.461e12 >= 1 ? fmtKm(size * 9.461e12) : Math.round(size * 9.461e14) * 10 + ' m';
+      sub = 'after the Big Bang · about ' + fmtTemp(deep.T) + ' · the part of the universe we can see today was ' + esc(sz) + ' across';
+    }
+  }
+  $('deepSub').innerHTML = sub;
   const r = deep.yrsPerSec;
-  $('deepRate').textContent = !deep.playing ? 'Paused' : deep.hold > 0 ? 'Slowing for a moment' :
-    'Time now passes at ' + (r < 1e15 && fmtYears(r) ? fmtYears(r) : '10^' + Math.floor(Math.log10(Math.max(r, 1))) + ' years') + ' per second';
-  if (!deep.dragSlider) $('deepSlider').value = Math.round(deep.logY * 10);
+  let rt;
+  if (deep.cosmic && r < 1) { const s = r * 3.15576e7; rt = s >= 1 ? fmtCosmicTime(r).replace(/<[^>]+>/g, '') : fmtPow(Math.max(s, 1e-45)) + ' seconds'; }
+  else rt = (r < 1e15 && fmtYears(r)) ? fmtYears(r) : fmtPow(Math.max(r, 1)) + ' years';
+  $('deepRate').textContent = !deep.playing ? 'Paused' : deep.hold > 0 ? 'Paused on this moment' :
+    (deep.dir < 0 ? 'Rewinding ' : 'Time now passes at ') + rt + ' per second';
+  $('deepHud').classList.toggle('bright', deep.cosmic && deep.T > 900);
+  if (!deep.dragSlider) $('deepSlider').value = Math.round(deepSliderOfX(deep.x));
   $('deepPlay').classList.toggle('on', deep.playing);
   $('deepPlayIcon').classList.toggle('hidden', deep.playing); $('deepPauseIcon').classList.toggle('hidden', !deep.playing);
+  $('deepBack').classList.toggle('on', deep.dir < 0); $('deepFwd').classList.toggle('on', deep.dir > 0);
   $('deepGuide').classList.toggle('hidden', !deep.takeover);
 }
-function deepShowChapter() {
-  const c = DEEP_TIME[deep.chapter];
+function deepShowChapter(c) {
   const card = $('deepCard');
   if (!c) { card.classList.add('hidden'); return; }
   card.classList.remove('hidden');
@@ -5165,70 +6055,132 @@ function deepShowChapter() {
   $('deepTitle').textContent = c.title; $('deepText').textContent = c.text;
   card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop');
 }
-function deepChapterFor(L) { let k = -1; for (let i = 0; i < DEEP_TIME.length; i++) if (DEEP_TIME[i].log <= L + 1e-9) k = i; return k; }
-function deepEnd(show) { $('deepEnd').classList.toggle('hidden', !show); }
+/* the milestone most recently passed on the way out from today */
+function deepChapterFor(x) {
+  let best = null;
+  for (let i = 0; i < DEEP_CH.length; i++) {
+    const c = DEEP_CH[i];
+    if (c.x === 0) { if (Math.abs(x) < 1e-9) return c; continue; }
+    if (x >= 0 ? (c.x > 0 && c.x <= x + 1e-9) : (c.x < 0 && c.x >= x - 1e-9)) { if (!best || Math.abs(c.x) > Math.abs(best.x)) best = c; }
+  }
+  return best;
+}
+/* the scrubber gives every chapter the same room, whatever stretch of time lies between them:
+   on a plain log scale the Sun's whole red-giant phase, or the first billion years, would be a hair's width */
+const DEEP_SL = 100;
+function deepXOfSlider(v) {
+  const n = DEEP_CH.length - 1, s = clamp(v / DEEP_SL, 0, n), i = Math.min(n - 1, Math.floor(s)), f = s - i;
+  if (f < 0.14) return DEEP_CH[i].x;                        /* snap to the chapter itself */
+  if (f > 0.86) return DEEP_CH[i + 1].x;
+  return lerp(DEEP_CH[i].x, DEEP_CH[i + 1].x, (f - 0.14) / 0.72);
+}
+function deepSliderOfX(x) {
+  const n = DEEP_CH.length - 1;
+  if (x <= DEEP_CH[0].x) return 0;
+  for (let i = 0; i < n; i++) if (x <= DEEP_CH[i + 1].x) {
+    const f = (x - DEEP_CH[i].x) / (DEEP_CH[i + 1].x - DEEP_CH[i].x);
+    return (i + (f <= 0 ? 0 : f >= 1 ? 1 : 0.14 + 0.72 * f)) * DEEP_SL;
+  }
+  return n * DEEP_SL;
+}
+function deepEnd(show) {
+  $('deepEnd').classList.toggle('hidden', !show);
+  if (!show) return;
+  const past = deep.x < 0;
+  $('deepEndText').textContent = past ? 'That is the beginning, as far back as physics can see.' : 'That is the future as far as physics can see. If protons never decay, the story runs on far longer still.';
+  $('deepAgain').textContent = past ? 'Play it forward from here' : 'Watch again';
+}
 /* ---- in and out ---- */
-function deepStart() {
-  if (deep.on) return;
+function deepStart(dir) {
+  dir = dir < 0 ? -1 : 1;
+  if (deep.on) { deepRestart(dir); return; }
   closeRoute(); closeCompare(); select(null);
   deepStore.panelOpen = !panel.classList.contains('hidden');
   deepStore.playing = playing; deepStore.simJd = simJd;
   deepStore.sun = { r: byId.sun.radiusAU, col: byId.sun.color };
   deepStore.earthColor = byId.earth.color; deepStore.earthColor2 = byId.earth.color2;
   deepStore.m31pos = { x: byId.m31.pos.x, y: byId.m31.pos.y, z: byId.m31.pos.z };
+  deepStore.lmcpos = byId.lmc ? { x: byId.lmc.pos.x, y: byId.lmc.pos.y, z: byId.lmc.pos.z } : null;
+  deepStore.smcpos = byId.smc ? { x: byId.smc.pos.x, y: byId.smc.pos.y, z: byId.smc.pos.z } : null;
   panel.classList.add('hidden'); $('reopenBtn').classList.remove('show');
   $('timeBar').classList.add('hidden'); $('deepHud').classList.remove('hidden'); $('deepBar').classList.remove('hidden');
-  deep.on = true; deep.jd0 = simJd; deep.year0 = dateFromJd(simJd).getUTCFullYear() + dateFromJd(simJd).getUTCMonth() / 12;
-  deepRestart();
+  deep.on = true; deep.jd0 = jdFromDate(new Date()); deep.year0 = DEEP_NOW_YEAR;   /* the timeline is anchored to the real present, wherever the clock had been left */
+  deepRestart(dir);
 }
-function deepRestart() {
+function deepRestart(dir) {
   objects.forEach(function (o) { o.deepBlur = false; });
-  deepSetLog(0); deep.chapter = -1; deep.hold = 0; deep.playing = true; deep.takeover = false; deep.shot = null; deep.clock = 0;
-  deepEnd(false); $('deepCard').classList.add('hidden');
+  deep.dir = dir < 0 ? -1 : 1;
+  deepSetX(0); deep.chapter = -1; deep.playing = true; deep.takeover = false; deep.shot = null; deep.clock = 0; deep.nebT0 = null;
+  deepEnd(false);
+  const intro = deep.dir < 0 ? DEEP_PAST_INTRO : DEEP_INTRO_FUTURE;
+  deepShowChapter(intro); deep.hold = intro ? 4.5 : 0;
 }
 function deepStop() {
   if (!deep.on) return;
   deep.on = false;
   objects.forEach(function (o) { o.deepBlur = false; });
+  deepSetX(0);
   byId.sun.radiusAU = deepStore.sun.r; byId.sun.color = deepStore.sun.col;
-  byId.earth.dry = false; byId.earth.color = deepStore.earthColor; byId.earth.color2 = deepStore.earthColor2;
+  byId.earth.dry = false; byId.earth.plain = false; byId.earth.color = deepStore.earthColor; byId.earth.color2 = deepStore.earthColor2;
   byId.m31.pos = deepStore.m31pos;
+  if (byId.lmc) byId.lmc.pos = deepStore.lmcpos;
+  if (byId.smc) byId.smc.pos = deepStore.smcpos;
+  deep.orbitK = 1; deep.zx = 0;
   simJd = deepStore.simJd; playing = deepStore.playing; updatePlayIcon();
   $('timeBar').classList.remove('hidden'); $('deepHud').classList.add('hidden'); $('deepBar').classList.add('hidden'); deepEnd(false);
   cam.rollGoal = 0;
   if (deepStore.panelOpen) panel.classList.remove('hidden');
   goHome();
 }
-$('btnDeepTime').addEventListener('click', deepStart);
+$('btnDeepTime').addEventListener('click', function () { deepStart(1); });
+$('btnDeepPast').addEventListener('click', function () { deepStart(-1); });
 $('deepExit').addEventListener('click', deepStop);
 $('deepEndExit').addEventListener('click', deepStop);
-$('deepAgain').addEventListener('click', deepRestart);
+$('deepAgain').addEventListener('click', function () {
+  if (deep.x < 0) { deep.dir = 1; deep.playing = true; deep.hold = 0; deepEnd(false); }      /* from the Big Bang forward, through today and on */
+  else deepRestart(1);
+});
 $('deepPlay').addEventListener('click', function () {
-  if (deep.logY >= 100.29) { deepRestart(); return; }
+  if (!deep.playing && deep.hold <= 0 && ((deep.dir > 0 && deep.x >= DEEP_XMAX - 1e-3) || (deep.dir < 0 && deep.x <= DEEP_XMIN + 1e-3))) { deep.dir = -deep.dir; deep.playing = true; deepEnd(false); return; }
   deep.playing = !deep.playing; if (deep.playing) deepEnd(false);
 });
+$('deepBack').addEventListener('click', function () { if (deep.x > DEEP_XMIN + 1e-3) { deep.dir = -1; deep.playing = true; deep.hold = 0; deepEnd(false); } });
+$('deepFwd').addEventListener('click', function () { if (deep.x < DEEP_XMAX - 1e-3) { deep.dir = 1; deep.playing = true; deep.hold = 0; deepEnd(false); } });
 $('deepGuide').addEventListener('click', function () { deep.takeover = false; deep.shot = null; });
 const deepSlider = $('deepSlider');
+deepSlider.min = 0; deepSlider.max = (DEEP_CH.length - 1) * DEEP_SL;
 deepSlider.addEventListener('input', function () {
   deep.dragSlider = true;
-  const L = deepSlider.value / 10;
+  const x = deepXOfSlider(+deepSlider.value);
   objects.forEach(function (o) { o.deepBlur = false; });
-  deepSetLog(L); deep.hold = 0; deep.chapter = deepChapterFor(L); deepShowChapter(); deepEnd(false);
+  deepSetX(x); deep.hold = 0; deep.nebT0 = null;
+  deep.chapter = DEEP_CH.indexOf(deepChapterFor(deep.x)); deepShowChapter(deepChapterFor(deep.x)); deepEnd(false);
 });
 deepSlider.addEventListener('change', function () { deep.dragSlider = false; });
-/* chapter ticks along the slider */
+/* arrow keys step over the snap zone around each chapter instead of being held by it */
+deepSlider.addEventListener('keydown', function (e) {
+  const d = (e.key === 'ArrowRight' || e.key === 'ArrowUp') ? 1 : (e.key === 'ArrowLeft' || e.key === 'ArrowDown') ? -1 : 0;
+  if (!d) return;
+  e.preventDefault();
+  const v = +deepSlider.value, base = Math.floor(v / DEEP_SL) * DEEP_SL, f = v - base;
+  const nv = d > 0 ? (f < 15 ? base + 15 : f >= 85 ? base + DEEP_SL : v + 1) : (f === 0 ? base - 15 : f <= 15 ? base : f > 85 ? base + 85 : v - 1);
+  deepSlider.value = clamp(nv, +deepSlider.min, +deepSlider.max);
+  deepSlider.dispatchEvent(new Event('input')); deepSlider.dispatchEvent(new Event('change'));
+});
+/* chapter ticks along the slider, with today marked */
 (function () {
-  const box = $('deepTicks');
-  DEEP_TIME.forEach(function (c) {
-    const t = document.createElement('span'); t.className = 'deep-tick'; t.style.left = (Math.min(c.log, 100) / 100.3 * 100) + '%'; t.title = c.title;
+  const box = $('deepTicks'), n = DEEP_CH.length - 1;
+  DEEP_CH.forEach(function (c, i) {
+    const t = document.createElement('span'); t.className = 'deep-tick' + (c.x === 0 ? ' now' : ''); t.style.left = (i / n * 100) + '%'; t.title = c.title;
     box.appendChild(t);
+    if (c.x === 0) $('deepNowLabel').style.left = (i / n * 100) + '%';
   });
 })();
 /* dragging during deep time hands the camera to the viewer; time keeps running */
 canvas.addEventListener('pointerdown', function () { if (deep.on) deep.takeover = true; });
 canvas.addEventListener('wheel', function () { if (deep.on) deep.takeover = true; });
 
-window.OU = { objects: objects, byId: byId, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+window.OU = { objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
               step: function (dt, noDraw) { dt = dt || 0.016; if (deep.on) deepTick(dt); updatePositions(simJd); if (deep.on) deepWorld(); if (deep.on && !deep.takeover) deepCamera(dt); updateCamera(dt); if (!noDraw) { render(dt); if (deep.on) { deepOverlay(); deepHud(); } } },
