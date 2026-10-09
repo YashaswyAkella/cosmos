@@ -309,7 +309,7 @@ function fmtLy(ly) {
 /* Most deep-sky facts follow from the catalogue row, so build the stat
    table rather than repeating it 110 times in the data file. */
 function deepSkyStats(d) {
-  const st = { 'Type': DS_TYPE[d.sub] || 'Deep sky object' };
+  const st = { 'Type': d.typeName || DS_TYPE[d.sub] || 'Deep sky object' };
   if (d.con) st['Constellation'] = d.con;
   st['Distance'] = fmtLy(d.d);
   if (d.arcmin) st['Apparent size'] = d.arcmin >= 60 ? (d.arcmin / 60).toFixed(1) + '°' : d.arcmin + '′';
@@ -325,12 +325,15 @@ DEEP_SKY.forEach(function (d) {
   const sizeLy = d.size != null ? d.size : d.d * (d.arcmin / 60) * DEG;
   d.stats = deepSkyStats(d);
   const o = addObject({
-    id: d.id, name: d.name, type: DS_TYPE[d.sub] || 'Deep sky object',
+    id: d.id, name: d.name, type: (d.typeName || DS_TYPE[d.sub] || 'Deep sky object') + (d.also ? ' · ' + d.also.replace(/ (?=[\d&])/g, '\u00a0') : ''),   /* 'NGC 6205' stays on one line */
     kind: 'deepsky', sub: d.sub, category: d.cat,
     color: d.color, color2: d.color2 || d.color,
     radiusAU: (sizeLy / 2) * LY_AU,
     fixed: v, data: d, prio: 56, minPx: 2.2
   });
+  if (d.sizeNote) o.sizeApprox = d.sizeNote;
+  else if (d.size == null && d.arcmin) o.sizeApprox = 'worked out from its apparent size of ' + (d.arcmin >= 60 ? (d.arcmin / 60).toFixed(1) + '°' : d.arcmin + '′') + ' and its distance';
+  if (d.sizeLabel) o.sizeLabel = d.sizeLabel;
   o.pos = { x: v.x, y: v.y, z: v.z };
 
   const rng = mulberry32(d.id.length * 7919 + d.name.length * 131 + 7);
@@ -3932,18 +3935,29 @@ function categoryMembers(catId) {
 
 function openCategory(catId) {
   const cat = CATEGORIES.find(function (c) { return c.id === catId; });
-  const list = categoryMembers(catId);
+  let list = categoryMembers(catId);
   $('detailTitle').textContent = cat.name;
   $('detailSub').textContent = cat.sub;
   const ul = $('detailList');
   ul.innerHTML = '';
-  list.forEach(function (o) {
+  const heading = function (t) { const li = document.createElement('li'); li.className = 'object-section'; li.textContent = t; ul.appendChild(li); };
+  if (catId === 'clusters' && typeof FAMOUS_CLUSTER_IDS !== 'undefined') {
+    /* the well-known ones first, in their own section, then everything else */
+    const famous = FAMOUS_CLUSTER_IDS.map(function (id) { return byId[id]; }).filter(Boolean);
+    const rest = list.filter(function (o) { return FAMOUS_CLUSTER_IDS.indexOf(o.id) < 0; });
+    list = famous.concat(rest);
+    heading('Famous clusters');
+    list.famousEnd = famous.length;
+  }
+  list.forEach(function (o, idx) {
+    if (list.famousEnd != null && idx === list.famousEnd) heading('More clusters');
     const li = document.createElement('li');
     const badge = o.kind === 'deepfield' ? (o.data.planned ? 'planned' : String(o.data.year))
                 : o.kind === 'constellation' ? o.data.area.toLocaleString() + ' sq°'
                 : o.kind === 'star' ? (o.data.d < 100 ? o.data.d.toFixed(2) + ' ly' : Math.round(o.data.d).toLocaleString() + ' ly')
                 : o.kind === 'blackhole' ? Math.round(o.data.d).toLocaleString() + ' ly'
-                : o.kind === 'distant' ? (o.data.z != null ? 'z ' + o.data.z : o.data.dMly + ' Mly') : '';
+                : o.kind === 'distant' ? (o.data.z != null ? 'z ' + o.data.z : o.data.dMly + ' Mly')
+                : (o.kind === 'deepsky' && o.category === 'clusters' && o.data.d > 0) ? fmtLy(o.data.d) : '';
     li.innerHTML =
       '<button class="object-btn">' +
         '<span class="object-dot" style="background:' + o.color + ';color:' + o.color + '"></span>' +
@@ -4274,6 +4288,7 @@ function bulkRow(id, name, type, color, make) {
   return { id: id, name: name, type: type, color: color, promote: make, bulkRow: true };
 }
 function searchBulk(q, out, limit) {
+  const qk = q.replace(/\s+/g, '');                        /* NGC/IC names carry no spaces ("ngc 457" must find NGC0457); PN, SNR and NED names do, so q is tested too */
   const have = {};
   for (let i = 0; i < out.length; i++) have[out[i].id] = 1;
   if (bulkStars) {
@@ -4285,11 +4300,19 @@ function searchBulk(q, out, limit) {
     }
   }
   if (bulkDso) {
+    if (!bulkDso.curated) {                                 /* 'NGC 457' in a curated object's aliases: that object is offered in place of the bulk row NGC0457 */
+      bulkDso.curated = {};
+      objects.forEach(function (o) { ((o.data && o.data.aliases) || []).concat([o.name]).forEach(function (a) {
+        const m = /^(NGC|IC)\s*0*(\d+)$/i.exec(a); if (m) bulkDso.curated[m[1].toUpperCase() + ('0000' + m[2]).slice(-4)] = o.id; }); });
+    }
     for (let i = 0; i < bulkDso.n && out.length < limit; i++) {
-      if ((bulkDso.lname[i].indexOf(q) >= 0 || (bulkDso.lcommon[i] && bulkDso.lcommon[i].indexOf(q) >= 0))
-          && !have['ngc_' + i])
+      if ((bulkDso.lname[i].indexOf(q) >= 0 || bulkDso.lname[i].indexOf(qk) >= 0 || bulkDso.lname[i].replace(/(ngc|ic)0+/, '$1').indexOf(qk) >= 0 || (bulkDso.lcommon[i] && bulkDso.lcommon[i].indexOf(q) >= 0))
+          && !have['ngc_' + i]) {
+        const cid = bulkDso.curated[bulkDso.names[i]];       /* a curated object owns this catalogue entry: offer it instead */
+        if (cid) { if (byId[cid] && !have[cid]) { out.push(byId[cid]); have[cid] = 1; } continue; }
         out.push(bulkRow('ngc_' + i, bulkDso.common[i] || bulkDso.names[i],
                          bulkDso.typeNames[bulkDso.type[i]], '#cdd6ee', bulkDsoObject.bind(null, i)));
+      }
     }
   }
   if (bulkGal) {
@@ -4751,7 +4774,7 @@ function sizeInfo(o) {
     const m = d.massSuns || d.mass;
     return { r: o.radiusAU, label: 'Event horizon', what: m ? 'worked out from its mass of ' + (m >= 1e9 ? fmtSuns(m) : m >= 1e6 ? Number((m / 1e6).toPrecision(2)) + ' million Suns' : m + ' Suns') : '', approx: true, look: 'bh' };
   }
-  return { r: o.sizeR || o.radiusAU, label: 'Diameter', what: o.sizeApprox || o.sizeWhat || '', approx: !!o.sizeApprox,
+  return { r: o.sizeR || o.radiusAU, label: o.sizeLabel || 'Diameter', what: o.sizeApprox || o.sizeWhat || '', approx: !!o.sizeApprox,
            look: (o.kind === 'star' || o.kind === 'sun') ? 'star' : o.kind === 'deepsky' ? 'glow' : 'ball' };
 }
 /* why a thing has no real size to show */
@@ -5025,6 +5048,7 @@ function runSearch() {
   /* exact names and ids first, then names that start with the query, then anything
      containing it — so "leo" is Leo before Galileo and "m31" is Andromeda */
   const qk = q.replace(/\s+/g, '');
+  const nz = function (s) { return s.replace(/^(ngc|ic)0+(?=\d)/, '$1'); };   /* "ngc0457" is "ngc457" */
   const scored = [];
   for (let i = 0; i < objects.length; i++) {
     const o = objects[i], nm = o.name.toLowerCase();
@@ -5036,7 +5060,7 @@ function runSearch() {
     const al = o.data && o.data.aliases;
     if (al) for (let k = 0; k < al.length; k++) {
       const v = al[k].toLowerCase();
-      if (v === q || v.replace(/\s+/g, '') === qk) { s = 0; break; }
+      if (v === q || nz(v.replace(/\s+/g, '')) === nz(qk)) { s = 0; break; }
       if (v.indexOf(q) === 0 && (s < 0 || s > 1)) s = 1;
     }
     if (s >= 0) scored.push({ o: o, s: s, p: o.prio || 0 });

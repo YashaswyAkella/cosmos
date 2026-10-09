@@ -162,6 +162,8 @@ button, input { font-family: inherit; }
   box-shadow: 0 0 10px 1px currentColor;
 }
 .object-badge { margin-left: auto; font-size: 11px; color: var(--dim); white-space: nowrap; }
+.object-section { font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); padding: 12px 8px 4px; }
+.object-section:first-child { padding-top: 4px; }
 
 .detail-back {
   display: flex; align-items: center; gap: 5px;
@@ -202,7 +204,7 @@ button, input { font-family: inherit; }
 .info-type { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
 .info-desc { font-size: 12.5px; line-height: 1.55; color: #d5d5dd; margin: 0 0 14px; }
 
-.info-stats { margin: 0 0 14px; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 12px; }
+.info-stats { margin: 0 0 14px; display: grid; grid-template-columns: fit-content(55%) 1fr; gap: 6px 12px; font-size: 12px; }
 .info-stats dt { color: var(--muted); }
 .info-stats dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 
