@@ -4109,7 +4109,6 @@ function select(id) {
   $('infoDesc').textContent = (o.data && o.data.desc) || '';
   renderStats(o);
   renderRelated(o);
-  $('btnFollow').classList.toggle('on', cam.follow === id);
   refreshGotoLabel();
 }
 
@@ -4152,14 +4151,7 @@ function refreshGotoLabel() {
   const o = selectedId && byId[selectedId];
   const aimOnly = o && (o.kind === 'constellation' || o.kind === 'deepfield' || o.kind === 'ngc');
   $('btnGoto').textContent = aimOnly ? 'Look here' : 'Fly here';
-  $('btnFollow').style.display = aimOnly ? 'none' : '';
 }
-$('btnFollow').addEventListener('click', function () {
-  if (!selectedId) return;
-  cam.follow = (cam.follow === selectedId) ? null : selectedId;
-  $('btnFollow').classList.toggle('on', cam.follow === selectedId);
-  updateFocusChip();
-});
 
 function updateFocusChip() {
   const chip = $('focusChip');
@@ -4169,7 +4161,6 @@ function updateFocusChip() {
   } else {
     chip.classList.add('hidden');
   }
-  if (selectedId) $('btnFollow').classList.toggle('on', cam.follow === selectedId);
 }
 $('focusClear').addEventListener('click', function () { cam.follow = null; updateFocusChip(); });
 
