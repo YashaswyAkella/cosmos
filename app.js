@@ -3956,7 +3956,7 @@ function openCategory(catId) {
                 : o.kind === 'constellation' ? o.data.area.toLocaleString() + ' sq°'
                 : o.kind === 'star' ? (o.data.d < 100 ? o.data.d.toFixed(2) + ' ly' : Math.round(o.data.d).toLocaleString() + ' ly')
                 : o.kind === 'blackhole' ? Math.round(o.data.d).toLocaleString() + ' ly'
-                : o.kind === 'distant' ? (o.data.z != null ? 'z ' + o.data.z : o.data.dMly + ' Mly')
+                : o.kind === 'distant' ? (o.data.z != null ? (/· z /.test(o.type) ? '' : 'z ' + o.data.z) : o.data.dMly + ' Mly')   /* the type line already carries z for the far ones */
                 : (o.kind === 'deepsky' && o.category === 'clusters' && o.data.d > 0) ? fmtLy(o.data.d) : '';
     li.innerHTML =
       '<button class="object-btn">' +
@@ -4293,13 +4293,17 @@ function searchBulk(q, out, limit) {
   if (bulkDso) {
     if (!bulkDso.curated) {                                 /* 'NGC 457' in a curated object's aliases: that object is offered in place of the bulk row NGC0457 */
       bulkDso.curated = {};
+      const key = function (a) {                              /* 'NGC 457' -> NGC0457, 'Sh2-117' -> SH2-117, as the catalogue spells them */
+        const m = /^(NGC|IC)\s*0*(\d+)$/i.exec(a);
+        return m ? m[1].toUpperCase() + ('0000' + m[2]).slice(-4) : /^SH2-\d+$/i.test(a) ? a.toUpperCase() : null;
+      };
       objects.forEach(function (o) { ((o.data && o.data.aliases) || []).concat([o.name]).forEach(function (a) {
-        const m = /^(NGC|IC)\s*0*(\d+)$/i.exec(a); if (m) bulkDso.curated[m[1].toUpperCase() + ('0000' + m[2]).slice(-4)] = o.id; }); });
+        const k = key(a); if (k && !bulkDso.curated[k]) bulkDso.curated[k] = o.id; }); });
     }
     for (let i = 0; i < bulkDso.n && out.length < limit; i++) {
       if ((bulkDso.lname[i].indexOf(q) >= 0 || bulkDso.lname[i].indexOf(qk) >= 0 || bulkDso.lname[i].replace(/(ngc|ic)0+/, '$1').indexOf(qk) >= 0 || (bulkDso.lcommon[i] && bulkDso.lcommon[i].indexOf(q) >= 0))
           && !have['ngc_' + i]) {
-        const cid = bulkDso.curated[bulkDso.names[i]];       /* a curated object owns this catalogue entry: offer it instead */
+        const cid = bulkDso.curated[bulkDso.names[i].toUpperCase()];   /* a curated object owns this catalogue entry: offer it instead */
         if (cid) { if (byId[cid] && !have[cid]) { out.push(byId[cid]); have[cid] = 1; } continue; }
         out.push(bulkRow('ngc_' + i, bulkDso.common[i] || bulkDso.names[i],
                          bulkDso.typeNames[bulkDso.type[i]], '#cdd6ee', bulkDsoObject.bind(null, i)));
