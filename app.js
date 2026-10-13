@@ -5313,9 +5313,10 @@ function frame(now) {
   render(dt);
   if (deep.on) { deepOverlay(); deepHud(); }
 
+  statTick++;
   if (route.open && statTick % 30 === 0) renderRoute();
   /* distances drift as the clock runs, so refresh them a few times a second */
-  if (selectedId && byId[selectedId] && ++statTick % 20 === 0) renderStats(byId[selectedId]);
+  if (selectedId && byId[selectedId] && statTick % 20 === 0) renderStats(byId[selectedId]);
   $('timeDate').textContent = fmtDate(simJd);
   $('scaleReadout').textContent = cam.fov < FOV_DEFAULT * 0.98 ? 'View: ' + fmtAngle(cam.fov) + ' across' : 'View: ' + fmtDist(cam.dist);
 

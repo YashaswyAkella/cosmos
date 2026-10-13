@@ -2043,3 +2043,4 @@ const DEEP_PAST = [
   { id: 'begin', tcSec: 1e-36, tag: 'spec', title: 'Where known physics stops',
     text: 'Run the clock back further and our theories of gravity and quantum physics stop working together, by 10⁻⁴³ seconds at the latest. Nobody knows what happened at time zero, or whether there was a time zero at all.' }
 ];
+
