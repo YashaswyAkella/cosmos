@@ -426,6 +426,13 @@ const EXOTIC = [
     stats:{ 'Mass':'4.3 million Suns', 'Distance':'27,000 light years', 'Event horizon':'≈ 25 million km across', 'Orbital period of the Sun':'≈ 215 million years', 'First imaged':'12 May 2022' } }
 ];
 
+/* ---------------- The Solar System as one thing, for sizes and the cosmic address ----------------
+   Taken out to the outer edge of the Kuiper Belt, 50 AU from the Sun (the belt entry below gives the same 30-50 AU range).
+   Heliopause: Voyager 1 crossed it on 25 August 2012 at 121 AU (NASA). Age: 4.57 billion years (meteorite dating). */
+const SOLAR_SYSTEM = { id:'solarsystem', name:'Solar System', rAU:50, color:'#ffd27a', aliases:['our solar system','the solar system','solar sys'], links:['sun','kuiperbelt','oortcloud'],
+  desc:'The Sun and everything bound to it. Here it is taken out to the far edge of the Kuiper Belt, 50 AU from the Sun: the disc of the planets and the icy leftovers beyond Neptune. The Sun\'s wind reaches more than twice as far, to the heliopause that Voyager 1 crossed at 121 AU, and its gravity holds the Oort Cloud about two thousand times farther out.',
+  stats:{ 'Width':'≈ 100 AU, to the outer edge of the Kuiper Belt', 'Planets':'8', 'Age':'≈ 4.57 billion years', 'Heliopause':'≈ 120 AU (Voyager 1 crossed it in 2012, at 121 AU)', 'Oort Cloud':'out to about 100,000 AU' } };
+
 /* ---------------- Belts ---------------- */
 const BELTS = {
   asteroid: { id:'asteroidbelt', name:'Asteroid Belt', count: 2200, rMin: 2.06, rMax: 3.28, span:[2.1, 3.3], incSigma: 7,
@@ -460,7 +467,7 @@ const CATEGORIES = [
   { id:'clusters',    name:'Star Clusters', sub:'Stars born together',          icon:'cluster' },
   { id:'nebulae',     name:'Nebulae',       sub:'Cosmic clouds of gas and dust', icon:'nebula' },
   { id:'galaxies',    name:'Galaxies',      sub:'Billions of star systems',     icon:'galaxy' },
-  { id:'structure',   name:'Our Address',   sub:'From the Orion Spur to Laniakea', icon:'address' },
+  { id:'structure',   name:'Our Address',   sub:'From the Solar System to Laniakea', icon:'address' },
   { id:'deepuniverse', name:'Deep Universe', sub:'Quasars, clusters and cosmic walls', icon:'quasar' },
   { id:'deepfields',  name:'Telescope Views', sub:'What Hubble, Webb and others stared at', icon:'deepfield' },
   { id:'constellations', name:'Constellations', sub:'The 88 figures of the sky', icon:'constellation' },

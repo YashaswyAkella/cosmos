@@ -483,6 +483,16 @@ Object.keys(BELTS).forEach(function (key) {
   });
 });
 
+/* The Solar System as one object, out to the Kuiper Belt's edge: something to set a quasar's black hole beside */
+if (typeof SOLAR_SYSTEM !== 'undefined') {
+  const s = SOLAR_SYSTEM;
+  const o = addObject({
+    id: s.id, name: s.name, type: 'Our planetary system', kind: 'region', category: 'structure', color: s.color,
+    radiusAU: s.rAU, regionRadius: s.rAU, fixed: { x: 0, y: 0, z: 0 }, data: s, prio: 50, minPx: 0, noRender: true, centre: true
+  });
+  o.pos = o.fixed;
+}
+
 
 /* --- The Milky Way as a whole: a selectable object, and a model of the galaxy
    for when the camera is far enough out to see it from outside. The model is
@@ -749,7 +759,7 @@ function cosmicAddress(o) {
   if (solar) {
     if (o.category === 'satellites' || (k === 'probe' && (o.mode === 'earthorbit' || o.mode === 'gp'))) push('earth');
     else if (o.parent && byId[o.parent] && k !== 'exoplanet') push(o.parent);
-    if (k !== 'sun') push('sun', 'Solar System');
+    if (byId.solarsystem) push('solarsystem'); else if (k !== 'sun') push('sun', 'Solar System');
     push('arm-orion'); push('milkyway'); tail(MW.centre); return steps;
   }
   if (k === 'ngc' || (o.dir && !o.pos)) { push('milkyway', 'Milky Way, distance not known'); tail(MW.centre); return steps; }
@@ -3928,7 +3938,7 @@ function categoryMembers(catId) {
   if (catId === 'featured') return FEATURED_IDS.map(function (id) { return byId[id]; }).filter(Boolean);
   const list = objects.filter(function (o) { return o.category === catId; });
   if (catId === 'galaxies' && byId.milkyway) return [byId.milkyway].concat(list.filter(function (o) { return o.id !== 'milkyway'; }));
-  if (catId === 'structure') return ['arm-orion', 'milkyway', 'localgroup', 'virgosc', 'laniakea', 'observable', 'bar', 'arm-sagittarius', 'arm-perseus', 'arm-scutum', 'arm-norma']
+  if (catId === 'structure') return ['solarsystem', 'arm-orion', 'milkyway', 'localgroup', 'virgosc', 'laniakea', 'observable', 'bar', 'arm-sagittarius', 'arm-perseus', 'arm-scutum', 'arm-norma']
     .map(function (id) { return byId[id]; }).filter(Boolean);
   return list;
 }
@@ -4385,6 +4395,7 @@ function theName(o, cap) {
   let n = o.name;
   const station = { 'ISS (ZARYA)': 'International Space Station', 'CSS (TIANHE)': 'Tiangong space station' }[n];   /* the catalogue names these after one module */
   if (station) return (cap ? 'The ' : 'the ') + station;
+  if (n === 'Solar System') return (cap ? 'The ' : 'the ') + n;
   if (/^The /.test(n)) n = n.slice(4);
   if (n === 'Observable universe') n = 'observable universe';
   const art = /^(Moon|Sun)$/.test(n) || (/(Nebula|Galaxy|Cluster|Belt|Cloud|Milky Way|Group|Supercluster|[Uu]niverse|Field|field|Spur|Arm|Wall|Void|Telescope|Observatory|Pleiades|Hyades|Pillars|Cliffs|bulge|Triangle|Arc)\b/.test(n) && !/'s /.test(n) && !/^(NGC|IC|M\d)/.test(n));
@@ -4508,6 +4519,13 @@ function tripPlace(o, ref) {
     }
     if (o.id === 'observable') return { pos: { x: ref.x + o.radiusAU, y: ref.y, z: ref.z }, name: 'the edge of the observable universe',
                                         note: 'The observable universe is centred on whoever is looking, so there is no trip to it, only to its edge, which is the same distance away in every direction.' };
+    if (o.id === 'solarsystem') {                           /* the Sun and planets out to the Kuiper Belt's edge, 50 AU */
+      const rr = Math.hypot(ref.x, ref.y, ref.z);
+      if (rr <= o.radiusAU) return { inside: true };
+      const k = o.radiusAU / rr;
+      return { pos: { x: ref.x * k, y: ref.y * k, z: ref.z * k }, name: 'the edge of the Solar System',
+               note: 'The Solar System is taken here out to the Kuiper Belt\'s outer edge, 50 AU from the Sun, so this is the trip to its edge.' };
+    }
     if (o.structLevel >= 1 && Math.hypot(ref.x - o.pos.x, ref.y - o.pos.y, ref.z - o.pos.z) < o.radiusAU) {
       const c = o.id === 'milkyway' ? 'the black hole Sagittarius A*' : (d.stats && d.stats['Centre'] ? d.stats['Centre'].replace(/^(The|Between)\b/, function (m) { return m.toLowerCase(); }) : '');
       return { pos: o.pos, obj: o, name: 'the centre of the ' + o.name, note: 'We are inside the ' + o.name + ', so this is the trip to its centre' + (c ? ': ' + c : '') + '.' };
@@ -4757,6 +4775,7 @@ function sizeInfo(o) {
       if (d.massSuns > 0) return { r: RS_KM * d.massSuns / AU_KM, label: 'Its black hole', what: 'event horizon, worked out from an estimated mass of ' + fmtSuns(d.massSuns) + (d.massNote ? ' (' + d.massNote + ')' : ''), approx: true, look: 'bh' };
       return null;
     case 'region': {
+      if (o.id === 'solarsystem') return { r: o.radiusAU, label: 'Width', what: 'the Sun and planets out to the outer edge of the Kuiper Belt, 50 AU from the Sun', approx: true, look: 'solar' };
       const cfg = o.category === 'belts' ? beltCfg(o) : null;
       if (cfg) return { r: (cfg.span || [0, cfg.rMax])[1], label: 'Width', what: 'outer edge to outer edge', approx: true, look: 'region' };
       if (o.armIndex != null || o.id === 'bar') return d.lengthLy > 0 ? { r: d.lengthLy / 2 * LY_AU, label: 'Length', what: d.lengthWhat || '', approx: true, look: 'region' } : null;
@@ -4824,7 +4843,8 @@ function comparePartner(o) {
   if (!s) return skyInfo(o) ? (o.id === 'moon' ? 'sun' : 'moon') : pick(['earth']);
   if (s.look === 'craft') return pick(['sat0', 'hubble', 'jwst']);                 /* another spacecraft: the Space Station */
   if (o.kind === 'neutron' || (o.kind === 'star' && (o.category === 'remnants' || (o.data && o.data.spec === 'D')))) return pick(['earth']);   /* dead stars are planet-sized or smaller */
-  if (s.look === 'bh') return s.r > 20 ? pick(['kuiperbelt', 'sun']) : s.r > 0.01 ? pick(['sun']) : pick(['earth']);
+  if (s.look === 'solar') return pick(['ton618', 'oortcloud']);                 /* the Solar System against the biggest black hole */
+  if (s.look === 'bh') return s.r > 20 ? pick(['solarsystem', 'sun']) : s.r > 0.01 ? pick(['sun']) : pick(['earth']);
   if (o.kind === 'star') return pick(['sun']);
   if (o.kind === 'sun') return pick(['earth']);
   if (o.kind === 'deepfield' || (o.kind === 'deepsky' && o.category !== 'galaxies')) return pick(['oortcloud', 'sun']);   /* nebulae and clusters: the whole Solar System, out to its comet cloud */
@@ -4897,7 +4917,7 @@ function renderCompare() {
     const noReal = !sizeInfo(A) ? A : !sizeInfo(B) ? B : null;
     if (noReal) html += '<p class="dim">' + esc(sizeWhy(noReal)) + '</p>';
   }
-  if (ratio > 40) html += '<p class="dim">At this scale ' + esc(nameIn(small)) + ' is a dot, so it is drawn with a magnified inset.</p>';
+  if (ratio > (ismall.look === 'solar' ? 12 : 40)) html += '<p class="dim">At this scale ' + esc(nameIn(small)) + ' is a dot, so it is drawn with a magnified inset.</p>';
   html += '</div>';
   box.innerHTML = html;
   drawCompare($('compareCanvas'), big, small, lookOf(big, ibig), lookOf(small, ismall), ratio, cw, ch, dpr);
@@ -4920,6 +4940,18 @@ function drawBall(g2, x, y, r, look) {
     const w = r * look.ax, h = r * look.ay;
     g2.fillStyle = hexA(look.color, 0.16); g2.strokeStyle = hexA(look.color, 0.9); g2.lineWidth = 1.2;
     g2.beginPath(); g2.rect(x - w, y - h, 2 * w, 2 * h); g2.fill(); g2.stroke(); return;
+  }
+  if (k === 'solar') {                                       /* the Solar System: the planets' orbits and the Kuiper Belt to scale; the Sun as a marker */
+    const AXES = [0.387, 0.723, 1, 1.524, 5.203, 9.537, 19.19, 30.07];    /* semi-major axes, AU */
+    g2.save();
+    const band = g2.createRadialGradient(x, y, r * 0.6, x, y, r);
+    band.addColorStop(0, 'rgba(143,163,196,0)'); band.addColorStop(0.1, 'rgba(143,163,196,0.26)'); band.addColorStop(1, 'rgba(143,163,196,0.04)');
+    g2.fillStyle = band; g2.beginPath(); g2.arc(x, y, r, 0, TAU); g2.fill();
+    g2.strokeStyle = 'rgba(160,175,255,0.45)'; g2.lineWidth = 1;
+    for (let i = 0; i < AXES.length; i++) { const rr = r * AXES[i] / 50; if (rr < 1.4) continue; g2.beginPath(); g2.arc(x, y, rr, 0, TAU); g2.stroke(); }
+    g2.strokeStyle = 'rgba(160,178,210,0.55)'; g2.beginPath(); g2.arc(x, y, r, 0, TAU); g2.stroke();   /* the Kuiper Belt's outer edge */
+    g2.fillStyle = '#ffd27a'; g2.beginPath(); g2.arc(x, y, Math.max(1.2, r * 0.012), 0, TAU); g2.fill();
+    g2.restore(); return;
   }
   if (k === 'craft') {                                       /* a spacecraft: a body between two panels, its full span drawn to scale */
     if (r < 1.5) { g2.fillStyle = '#dfe4ff'; g2.beginPath(); g2.arc(x, y, Math.max(r, 0.6), 0, TAU); g2.fill(); return; }
@@ -4956,7 +4988,7 @@ function drawCompare(cv, big, small, bigLook, smallLook, ratio, W2, H2, dpr) {
   const cx1 = W2 * 0.33, cx2 = W2 * 0.72, cy = H2 * 0.5;
   drawBall(g2, cx1, cy, rBig, bigLook);
   drawBall(g2, cx2, cy, rSmall, smallLook);
-  if (ratio > 40) {                                          /* inset for the speck */
+  if (ratio > (smallLook.kind === 'solar' ? 12 : 40)) {       /* inset for the speck; the Solar System needs room to show its orbits */
     const ir = Math.round(H2 * 0.13) / Math.max(1, smallLook.rings), ix = cx2, iy = cy - H2 * 0.27;
     g2.strokeStyle = 'rgba(255,255,255,0.25)'; g2.lineWidth = 1; g2.beginPath(); g2.arc(ix, iy, ir + 6, 0, TAU); g2.stroke();
     g2.beginPath(); g2.moveTo(ix, iy + ir + 6); g2.lineTo(cx2, cy - rSmall - 2); g2.stroke();
