@@ -1435,16 +1435,12 @@ const FAMOUS_SATELLITES = {
    is it" figure; a real mission coasts on a transfer orbit instead. */
 const VEHICLES = [
   { name:'Light',                                  kmps:299792.458, note:'the universal speed limit' },
-  { name:'Starshot lightsail, 20% of light',       kmps:59958.5,    note:'proposed, not yet built' },
   { name:'Parker Solar Probe at perihelion',       kmps:191,        note:'fastest human-made object, 2024' },
   { name:'Voyager 1',                              kmps:17.0,       note:'cruising since 1977' },
-  { name:'New Horizons at launch',                 kmps:16.26,      note:'fastest launch from Earth' },
-  { name:'Apollo 11 after translunar injection',   kmps:10.8,       note:'≈39,000 km/h' },
   { name:'International Space Station',            kmps:7.66,       note:'orbital speed' },
   { name:'Concorde',                               kmps:0.606,      note:'Mach 2' },
   { name:'Airliner',                               kmps:0.25,       note:'900 km/h' },
-  { name:'Car on a motorway',                      kmps:0.0278,     note:'100 km/h' },
-  { name:'Walking',                                kmps:0.00139,    note:'5 km/h' }
+  { name:'Car on a motorway',                      kmps:0.0278,     note:'100 km/h' }
 ];
 
 /* ---------------- Our galaxy, as a whole ----------------

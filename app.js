@@ -4147,6 +4147,12 @@ function renderStats(o) {
       rows.push(['Light from the Sun', lightMin < 60 ? lightMin.toFixed(1) + ' min' : (lightMin / 60).toFixed(1) + ' hours']);
     }
   }
+  const yrs = lightYearsAgo(o);
+  if (yrs != null) {
+    const era = eraOf(yrs);
+    if (o.kind !== 'distant') rows.push(['Its light left', era.when.replace(/^in /, '').replace(/^about /, '')]);
+    rows.push(['Earth then', era.what.replace(/^when /, '').replace(/^./, function (c) { return c.toUpperCase(); })]);
+  }
   rows.forEach(function (r) {
     const dt = document.createElement('dt'); dt.textContent = r[0];
     const dd = document.createElement('dd'); dd.textContent = r[1];
@@ -4604,6 +4610,17 @@ function renderRoute() {
     html += '<tr><td>' + esc(v.name) + '<span>' + esc(v.note) + '</span></td><td>' + esc(fmtDuration(km / v.kmps)) + '</td></tr>';
   });
   html += '</table>';
+  {
+    /* when this light left: what Earth was like as the light now arriving from the far end set out */
+    const A0 = byId[route.from], B0 = byId[route.to];
+    const home = function (o) { return o && o.pos && Math.hypot(o.pos.x, o.pos.y, o.pos.z) < 200; };   /* within the solar system */
+    const far = home(A0) && !home(B0) ? B0 : home(B0) && !home(A0) ? A0 : null;
+    const yrs = far ? lightYearsAgo(far) : null;
+    if (yrs != null) {
+      const era = eraOf(yrs);
+      html += '<div class="route-note about"><strong>When this light left.</strong> The light arriving from ' + esc(theName(far)) + ' now set out ' + esc(era.when) + ', ' + esc(era.what) + '.</div>';
+    }
+  }
   html += bestShot(a.obj || {}, b.obj || {});
   const ly = dAU / LY_AU;
   if (ly > 1e8) {
@@ -4617,6 +4634,60 @@ function renderRoute() {
   box.innerHTML = html;
 }
 
+
+/* ---- When this light left: what Earth was like when the light now arriving set out ----
+   Years ago -> a plain sentence. Dates are the usual textbook ones, rounded: first telescopes 1609, first farming
+   villages about 10,000 BC, cave paintings in the last Ice Age, Homo sapiens about 300,000 years, hand axes from
+   Homo erectus, first stone tools about 2.6-3.3 million years, the human line parting from the chimpanzees' about
+   7 million, the dinosaurs' end 66 million, Pangaea about 335-175 million, the first forests and four-legged animals
+   about 385-375 million, the Cambrian explosion 539 million, Rodinia about 1.1 billion-750 million, the Great
+   Oxidation 2.4 billion, the earliest life about 3.7 billion, Earth 4.54 billion, the Sun 4.57 billion years. */
+function eraOf(yrs) {
+  const nowY = dateFromJd(simJd).getUTCFullYear(), y = nowY - yrs;
+  const yearStr = y >= 1 ? String(Math.round(y)) : Math.round(1 - y).toLocaleString() + ' BC';
+  const when = yrs < 12000 ? 'in ' + yearStr : 'about ' + (yrs >= 1e9 ? fmtGyr(yrs / 1e9) : fmtYears(yrs)) + ' ago';   /* the same rounding as the stats */
+  let what;
+  if (yrs < 120) what = 'within a human lifetime';
+  else if (y >= 1609) what = 'after the first telescopes had been turned to the sky';
+  else if (y >= 1000) what = 'before any telescope existed';
+  else if (y >= 500) what = 'in the early Middle Ages';
+  else if (y >= 1) what = 'in Roman times';
+  else if (y >= -600) what = 'in the age of Buddha, Confucius and classical Greece';
+  else if (y >= -2000) what = 'in the Bronze Age';
+  else if (y >= -3200) what = 'when the pyramids of Giza were being built and the first cities were growing';
+  else if (y >= -10000) what = 'when the first farming villages were appearing';
+  else if (yrs < 50000) what = 'during the last Ice Age, when people were painting caves';
+  else if (yrs < 300000) what = 'when early Homo sapiens shared the Earth with Neanderthals';
+  else if (yrs < 2e6) what = 'when Homo erectus was making hand axes and modern humans did not yet exist';
+  else if (yrs < 3.3e6) what = 'when the first stone tools were being made';
+  else if (yrs < 7e6) what = 'when our ancestors had only just parted from the chimpanzees\' line';
+  else if (yrs < 66e6) what = 'in the age of mammals, after the dinosaurs';
+  else if (yrs < 252e6) what = 'when dinosaurs ruled the Earth';
+  else if (yrs < 335e6) what = 'when all the land was joined in the supercontinent Pangaea';
+  else if (yrs < 420e6) what = 'when the first forests grew and the first four-legged animals crawled onto land';
+  else if (yrs < 540e6) what = 'when animals were filling the seas and life was only beginning to reach the land';
+  else if (yrs < 700e6) what = 'when the only animals were soft-bodied creatures in the sea, and the land was bare';
+  else if (yrs < 1.1e9) what = 'when life was still single-celled and most of the land formed one supercontinent, Rodinia';
+  else if (yrs < 2.4e9) what = 'when life was only single-celled and oxygen was just beginning to fill the air';
+  else if (yrs < 3.8e9) what = 'when Earth had only bacteria and an air without oxygen';
+  else if (yrs < 4.54e9) what = 'when the newborn Earth was still being battered, before life began';
+  else if (yrs < 4.57e9) what = 'when the Sun had just lit up and Earth was still forming';
+  else if (yrs < 9e9) what = 'before the Sun and Earth existed';
+  else if (yrs < 13e9) what = 'before the Sun existed, when the Milky Way was still young';
+  else what = 'in the universe\'s first few hundred million years';
+  return { when: when, what: what };
+}
+/* how long the light now reaching Earth has been travelling from o, in years: the lookback time for the far universe,
+   the distance in light years for everything else; null inside the solar system or for things without a distance */
+function lightYearsAgo(o) {
+  if (!o) return null;
+  if (o.kind === 'distant') return o.data && o.data.lookback > 0 ? o.data.lookback * 1e9 : null;
+  if (o.kind === 'constellation' || o.kind === 'deepfield' || o.kind === 'ngc' || o.kind === 'region' || !o.pos) return null;
+  const e = byId.earth; if (!e || o === e) return null;
+  const ly = Math.hypot(o.pos.x - e.pos.x, o.pos.y - e.pos.y, o.pos.z - e.pos.z) / LY_AU;
+  return ly >= 0.5 ? ly : null;
+}
+
 /* ---- The best shot: how a real mission would actually go ---- */
 const REAL_TRIPS = {
   moon: 'Apollo 11 reached lunar orbit in about 3 days (16–19 July 1969) and landed on the fourth.',
@@ -4628,8 +4699,7 @@ const REAL_TRIPS = {
   uranus: 'Voyager 2 reached Uranus in 8.4 years (1977–1986) by slingshotting past Jupiter and Saturn.',
   neptune: 'Voyager 2 reached Neptune in 12 years (1977–1989), the only visit so far.',
   pluto: 'New Horizons flew past Pluto 9.5 years after launch (2006–2015), using a Jupiter slingshot.',
-  m31: 'No need to go: Andromeda is coming to us at about 110 km/s and makes its first close pass in roughly 5 billion years.',
-  alphacenA: 'Breakthrough Starshot hopes to send gram-sized light-sail probes there at a fifth of light speed, arriving about 20 years after launch.'
+  m31: 'No need to go: Andromeda is coming to us at about 110 km/s and makes its first close pass in roughly 5 billion years.'
 };
 function helioAt(o, jd) { return keplerPos(o.el, (jd - J2000) / 36525); }
 function fmtDay(jd) { return dateFromJd(jd).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
