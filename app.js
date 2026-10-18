@@ -3717,14 +3717,28 @@ function drawConstellationNames() {
    7. Interaction — orbit, zoom, pick
    ============================================================ */
 let dragging = false, lastX = 0, lastY = 0, movedPx = 0, idle = 0;
+/* fingers: every active pointer, so two of them can pinch */
+const touches = new Map();
+let pinchDist = 0, lastTap = { t: 0, x: 0, y: 0 };
+function pinchSpan() { const p = Array.from(touches.values()); return p.length >= 2 ? Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) : 0; }
 
 canvas.addEventListener('pointerdown', function (e) {
+  touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const capture = function () { try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* a synthetic event has no pointer to capture */ } };
+  if (touches.size === 2) { pinchDist = pinchSpan(); dragging = false; movedPx = 99; capture(); return; }
   dragging = true; movedPx = 0; idle = 0;
   lastX = e.clientX; lastY = e.clientY;
   canvas.classList.add('grabbing');
-  canvas.setPointerCapture(e.pointerId);
+  capture();
 });
 canvas.addEventListener('pointermove', function (e) {
+  if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touches.size >= 2) {                                   /* pinch: spread to zoom in, squeeze to zoom out */
+    const d = pinchSpan();
+    if (pinchDist > 0 && d > 0) { zoomBy(pinchDist / d); idle = 0; }
+    pinchDist = d;
+    return;
+  }
   if (!dragging) return;
   const dx = e.clientX - lastX, dy = e.clientY - lastY;
   movedPx += Math.abs(dx) + Math.abs(dy);
@@ -3738,10 +3752,20 @@ canvas.addEventListener('pointermove', function (e) {
   }
 });
 canvas.addEventListener('pointerup', function (e) {
+  const wasPinch = touches.size >= 2;
+  touches.delete(e.pointerId);
+  if (wasPinch) { pinchDist = pinchSpan(); if (touches.size) { const p = touches.values().next().value; lastX = p.x; lastY = p.y; dragging = true; } return; }
   dragging = false;
   canvas.classList.remove('grabbing');
-  if (movedPx < 5) pick(e.clientX, e.clientY, false);
+  if (movedPx < 5) {
+    if (e.pointerType === 'touch') {                        /* two quick taps on the same spot fly there, as a double-click does */
+      const now = performance.now(), twice = now - lastTap.t < 320 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 28;
+      lastTap = twice ? { t: 0, x: 0, y: 0 } : { t: now, x: e.clientX, y: e.clientY };
+      pick(e.clientX, e.clientY, twice);
+    } else pick(e.clientX, e.clientY, false);
+  }
 });
+canvas.addEventListener('pointercancel', function (e) { touches.delete(e.pointerId); pinchDist = pinchSpan(); if (!touches.size) { dragging = false; canvas.classList.remove('grabbing'); } });
 canvas.addEventListener('dblclick', function (e) { pick(e.clientX, e.clientY, true); });
 
 canvas.addEventListener('wheel', function (e) {
@@ -5384,6 +5408,7 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
 }
+if (navigator.maxTouchPoints > 0 && window.matchMedia('(pointer: coarse)').matches) $('hint').textContent = 'Drag to orbit · Pinch to zoom · Double-tap to fly';
 setTimeout(function () { $('hint').classList.add('show'); }, 900);
 setTimeout(function () { $('hint').classList.remove('show'); }, 6500);
 

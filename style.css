@@ -32,7 +32,7 @@ html, body {
 button, input { font-family: inherit; }
 .hidden { display: none !important; }
 
-.app { display: flex; flex-direction: column; height: 100vh; }
+.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }   /* dvh: the phone's address bar does not hide the time bar */
 
 /* ---------------- Header ---------------- */
 .topbar {
@@ -101,7 +101,7 @@ button, input { font-family: inherit; }
 
 /* ---------------- Stage ---------------- */
 .stage { position: relative; flex: 1; overflow: hidden; background: #000; }
-#scene { position: absolute; inset: 0; display: block; cursor: grab; }
+#scene { position: absolute; inset: 0; display: block; cursor: grab; touch-action: none; }   /* fingers drive the camera, not the page */
 #scene.grabbing { cursor: grabbing; }
 
 /* ---------------- Explore panel ---------------- */
@@ -473,6 +473,42 @@ button, input { font-family: inherit; }
 
 /* narrow windows: keep the right-hand tools reachable */
 @media (max-width: 760px) { #btnHome, #btnBack, #btnForward { display: none; } .search-input { width: 150px; } }
+
+/* ---------- phones ---------- */
+@media (max-width: 640px) {
+  .topbar { padding: 0 10px; }
+  .topbar-left { flex: 1 1 auto; min-width: 0; gap: 6px; }
+  .brand-beta { display: none; }
+  .search-wrap { flex: 1 1 auto; min-width: 0; margin-left: 0; }
+  .search-input { width: 100%; min-width: 0; }
+  .search-results { position: fixed; top: 50px; left: 12px; right: 12px; width: auto; max-height: 55vh; }
+  .topbar-right { gap: 4px; flex-shrink: 0; }
+  #btnRoutePanel, #btnComparePanel, #btnOnThisDay, .topbar-right .separator { display: none; }   /* trips and sizes open from an object; the day's events are a desktop extra */
+  .icon-btn { width: 32px; height: 32px; }
+
+  /* panels run the full width and leave the lower half of the map in view */
+  .panel, .info-panel, .route-panel { left: 12px; right: 12px; width: auto; top: 12px; max-height: 56%; }
+  .panel { padding: 16px 14px 12px; }
+  .popover, .popover.wide { left: 12px; right: 12px; width: auto; min-width: 0; top: 10px; max-height: calc(100% - 20px); }
+  .toast { top: auto; bottom: 140px; width: max-content; max-width: calc(100% - 24px); text-align: center; }
+
+  /* the time bar: play, date and Now on one row; deep past, the speeds and deep time on the next */
+  .time-bar { left: 12px; right: 12px; transform: none; bottom: calc(10px + env(safe-area-inset-bottom)); flex-wrap: wrap; justify-content: center; gap: 6px 6px; padding: 6px 8px; }
+  .time-bar::before { content: ''; flex-basis: 100%; height: 0; order: 4; }
+  #btnPlay { order: 1; } .time-date { order: 2; flex: 1 1 auto; min-width: 0; font-size: 12px; } #btnNow { order: 3; }
+  #btnDeepPast { order: 5; } .time-speeds { order: 6; } #btnDeepTime { order: 7; }
+  .time-bar .deep-launch { margin-left: 0; padding: 0 9px; }
+  .time-bar .deep-launch .lbl { display: none; }                                       /* icon only: the arrows say it */
+  .speed-btn { padding: 4px 5px; font-size: 11px; }
+  .stage-right { bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .hint { bottom: calc(96px + env(safe-area-inset-bottom)); left: 12px; transform: none; max-width: calc(100% - 140px); text-align: center; white-space: normal; }   /* beside the zoom buttons, not under them */
+  .focus-chip, .sky-bar { bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .deep-bar { left: 12px; right: 12px; transform: none; flex-wrap: wrap; justify-content: center; bottom: calc(10px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 640px) and (orientation: landscape) {
+  .panel, .info-panel, .route-panel { max-height: calc(100% - 100px); left: 12px; right: auto; width: 300px; }
+  .info-panel { left: auto; right: 12px; }
+}
 
 /* ---------- deep time ---------- */
 .deep-launch { margin-left: 4px; background: var(--accent-soft); border-color: rgba(124,140,255,0.4); color: #c3caff; }
