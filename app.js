@@ -3088,6 +3088,8 @@ function render(dt) {
     else if (o.kind === 'moon' && r > 1.6) labels.push(o);
   }
 
+  drawBeam();
+
   /* selection reticle */
   if (selectedId && byId[selectedId] && byId[selectedId].screen) {
     const o = byId[selectedId], p = o.screen;
@@ -4191,6 +4193,7 @@ function refreshGotoLabel() {
   const o = selectedId && byId[selectedId];
   const aimOnly = o && (o.kind === 'constellation' || o.kind === 'deepfield' || o.kind === 'ngc');
   $('btnGoto').textContent = aimOnly ? 'Look here' : 'Fly here';
+  $('btnBeam').style.display = (o && o.pos && !aimOnly && o.kind !== 'region') ? '' : 'none';
 }
 
 function updateFocusChip() {
@@ -4712,6 +4715,113 @@ function lightYearsAgo(o) {
   return ly >= 0.5 ? ly : null;
 }
 
+
+/* ============================================================
+   Light beam — a pulse of light sent from a place, spreading at c as the clock runs
+   ============================================================ */
+const C_AU_DAY = 173.1446;                                   /* light travels 173 AU a day */
+const beam = { on: false, p0: null, t0: 0, fromName: '', target: null, targetName: '', targetD: 0, marks: [], saved: null, arrived: 0, rate: 0 };
+function beamRadius() { return Math.max(0, (simJd - beam.t0) * C_AU_DAY); }
+/* the things the pulse will pass, in order of distance from where it set out */
+function beamMarks(p0) {
+  const out = [];
+  for (let i = 0; i < objects.length; i++) {
+    const o = objects[i], k = o.kind;
+    if (!o.pos || o.noRender) continue;
+    const ok = k === 'planet' || k === 'sun' || (k === 'dwarf' && o.category === 'dwarfs') || (k === 'moon' && o.parent === 'earth') ||
+               k === 'star' || k === 'neutron' || k === 'blackhole' || k === 'deepsky' || k === 'distant' || (k === 'probe' && o.mode === 'escape');
+    if (!ok) continue;
+    const d = Math.hypot(o.pos.x - p0.x, o.pos.y - p0.y, o.pos.z - p0.z);
+    if (d > 1e-7) out.push({ name: theName(o), d: d });
+  }
+  out.sort(function (a, b) { return a.d - b.d; });
+  return out;
+}
+/* send the pulse from p0 (a fixed point in space: the sender moves on without it) toward an optional target */
+function beamStart(p0, fromName, target, targetName) {
+  if (deep.on) { toast('Leave deep time first'); return; }
+  beam.on = true; beam.p0 = { x: p0.x, y: p0.y, z: p0.z }; beam.t0 = simJd; beam.fromName = fromName; beam.arrived = 0;
+  beam.target = target ? { x: target.x, y: target.y, z: target.z } : null; beam.targetName = targetName || '';
+  beam.targetD = target ? Math.hypot(target.x - p0.x, target.y - p0.y, target.z - p0.z) : 0;
+  beam.marks = beamMarks(beam.p0);
+  if (!beam.saved) beam.saved = { playing: playing };
+  /* run the clock at whatever rate makes the crossing take about ten seconds of real time, up to the fastest clock there is */
+  const spanAU = beam.targetD || cam.dist * 2, simSec = spanAU / C_AU_DAY * 86400;
+  beam.rate = clamp(simSec / 10, 1, SPEEDS[SPEEDS.length - 1].v);
+  playing = true; updatePlayIcon();
+  if (beam.target && beam.targetD > 0) {                       /* bring both ends into view */
+    const mid = { x: (p0.x + target.x) / 2, y: (p0.y + target.y) / 2, z: (p0.z + target.z) / 2 };
+    cam.follow = null; updateFocusChip();
+    cam.flight = { t: 0, dur: 1.4, obj: { id: null, pos: mid }, fx: cam.tx, fy: cam.ty, fz: cam.tz, fd: cam.dist,
+                   td: Math.max(frameDistance(beam.targetD / 2, 0.72), MIN_DIST), fyaw: cam.yawGoal, fpitch: cam.pitchGoal, noFollow: true };
+  }
+  $('beamHud').classList.remove('hidden'); beamHud(); idle = 0;
+}
+function beamStop() {
+  if (!beam.on) return;
+  beam.on = false; $('beamHud').classList.add('hidden');
+  beam.rate = 0;
+  if (beam.saved) { playing = beam.saved.playing; updatePlayIcon(); beam.saved = null; }
+}
+function beamHud() {
+  const R = beamRadius(), secs = (simJd - beam.t0) * 86400;
+  let l1 = '<strong>Light from ' + esc(beam.fromName) + '</strong> · ' + esc(fmtDuration(secs)) + ' · ' + esc(fmtDist(R)) + (beam.rate > 1.5 ? ' <span class="beam-rate">clock: ' + esc(beam.rate >= 31557600 ? '1 year' : fmtDuration(beam.rate)) + ' per second</span>' : '');
+  let l2 = '';
+  if (beam.target) {
+    const f = R / beam.targetD;
+    l2 = f >= 1 ? 'Reached ' + esc(beam.targetName) + ' after ' + esc(fmtDuration(beam.targetD / C_AU_DAY * 86400)) : Math.round(f * 100) + '% of the way to ' + esc(beam.targetName);
+  }
+  let last = null, next = null;
+  for (let i = 0; i < beam.marks.length; i++) { const m = beam.marks[i]; if (m.d <= R) last = m; else { next = m; break; } }
+  const bits = [];
+  if (last) bits.push('passed ' + esc(last.name));
+  if (next) bits.push('next ' + esc(next.name) + ' in ' + esc(fmtDuration((next.d - R) / C_AU_DAY * 86400)));
+  if (bits.length) l2 += (l2 ? ' · ' : '') + bits.join(' · ');
+  $('beamLine1').innerHTML = l1; $('beamLine2').innerHTML = l2;
+}
+/* each frame: the pulse ends a little after it arrives, or once it has swelled far beyond the view */
+function beamTick() {
+  if (!beam.on) return;
+  const R = beamRadius();
+  if (beam.target) {
+    if (R >= beam.targetD) { if (!beam.arrived) { beam.arrived = performance.now(); beamHud(); } else if (performance.now() - beam.arrived > 3500) beamStop(); }
+  } else if (R > 60 * cam.dist) beamStop();
+  if (beam.on && statTick % 6 === 0) beamHud();
+}
+function drawBeam() {
+  if (!beam.on) return;
+  const R = beamRadius(); if (R <= 0) return;
+  const P = beam.p0;
+  ctx.save();
+  if (beam.target) {                                         /* the line it is racing along */
+    const o = project(P), q = project(beam.target);
+    if (o && q) { ctx.strokeStyle = 'rgba(170,225,255,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(q.x, q.y); ctx.stroke(); ctx.setLineDash([]); }
+  }
+  /* the wavefront: a ring in the plane of the planets... */
+  ctx.strokeStyle = 'rgba(170,225,255,0.95)'; ctx.lineWidth = 2; ctx.shadowColor = 'rgba(170,225,255,0.9)'; ctx.shadowBlur = 8;
+  ctx.beginPath();
+  let started = false;
+  for (let k = 0; k <= 160; k++) {
+    const th = k / 160 * TAU;
+    const q = project({ x: P.x + R * Math.cos(th), y: P.y + R * Math.sin(th), z: P.z });
+    if (!q) { started = false; continue; }
+    if (!started) { ctx.moveTo(q.x, q.y); started = true; } else ctx.lineTo(q.x, q.y);
+  }
+  ctx.stroke(); ctx.shadowBlur = 0;
+  /* ...and the edge of the whole sphere, while we are still outside it */
+  const dist = Math.hypot(P.x - camPos.x, P.y - camPos.y, P.z - camPos.z), c = project(P);
+  if (c && R < dist * 0.999) {
+    const r = focal * Math.tan(Math.asin(R / dist));
+    if (r > 2 && r < 40000) {
+      const g = ctx.createRadialGradient(c.x, c.y, Math.max(0, r - Math.max(8, r * 0.1)), c.x, c.y, r);
+      g.addColorStop(0, 'rgba(170,225,255,0)'); g.addColorStop(1, 'rgba(170,225,255,0.22)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(170,225,255,0.45)'; ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 /* ---- The best shot: how a real mission would actually go ---- */
 const REAL_TRIPS = {
   moon: 'Apollo 11 reached lunar orbit in about 3 days (16–19 July 1969) and landed on the fourth.',
@@ -5229,6 +5339,13 @@ document.addEventListener('click', function (e) {
 $('btnRoutePanel').addEventListener('click', function () { if (route.open) closeRoute(); else { closeCompare(); openRoute(null, route.to || selectedId); } });
 $('routeClose').addEventListener('click', closeRoute);
 $('routeSwap').addEventListener('click', function () { const t = route.from; route.from = route.to; route.to = t; openRoute(); });
+$('routeBeam').addEventListener('click', function () {
+  const R = routeStops();
+  if (!R.a || !R.b) { toast(R.hint || (R.notes && R.notes[0]) || 'Pick two places first'); return; }
+  beamStart(R.a.pos, R.a.obj ? theName(R.a.obj) : R.a.name, R.b.pos, R.b.obj ? theName(R.b.obj) : R.b.name);
+});
+$('btnBeam').addEventListener('click', function () { const o = selectedId && byId[selectedId]; if (o && o.pos) beamStart(o.pos, theName(o), null, ''); });
+$('beamStop').addEventListener('click', beamStop);
 attachPicker('routeFrom', 'routeFromList', 'from');
 attachPicker('routeTo', 'routeToList', 'to');
 /* size comparison wiring */
@@ -5423,7 +5540,7 @@ function frame(now) {
   last = now;
 
   if (deep.on) deepTick(dt);
-  else if (playing) simJd += (SPEEDS[speedIdx].v * dt) / 86400;
+  else if (playing) simJd += (((beam.on && beam.rate) ? beam.rate : SPEEDS[speedIdx].v) * dt) / 86400;   /* a light beam sets its own pace */
 
   updatePositions(simJd);
   if (deep.on) deepWorld();
@@ -5441,6 +5558,7 @@ function frame(now) {
   if (deep.on) { deepOverlay(); deepHud(); }
 
   statTick++;
+  beamTick();
   if (route.open && statTick % 30 === 0) renderRoute();
   /* distances drift as the clock runs, so refresh them a few times a second */
   if (selectedId && byId[selectedId] && statTick % 20 === 0) renderStats(byId[selectedId]);
@@ -6239,6 +6357,7 @@ function deepEnd(show) {
 }
 /* ---- in and out ---- */
 function deepStart(dir) {
+  beamStop();
   dir = dir < 0 ? -1 : 1;
   if (deep.on) { deepRestart(dir); return; }
   closeRoute(); closeCompare(); select(null);
@@ -6327,7 +6446,7 @@ deepSlider.addEventListener('keydown', function (e) {
 canvas.addEventListener('pointerdown', function () { if (deep.on) deep.takeover = true; });
 canvas.addEventListener('wheel', function () { if (deep.on) deep.takeover = true; });
 
-window.OU = { objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+window.OU = { beam: beam, beamStart: beamStart, beamStop: beamStop, beamRadius: beamRadius, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
               step: function (dt, noDraw) { dt = dt || 0.016; if (deep.on) deepTick(dt); updatePositions(simJd); if (deep.on) deepWorld(); if (deep.on && !deep.takeover) deepCamera(dt); updateCamera(dt); if (!noDraw) { render(dt); if (deep.on) { deepOverlay(); deepHud(); } } },
