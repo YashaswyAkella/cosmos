@@ -3491,7 +3491,7 @@ function fmtGyr(g) {
 function fmtGly(g) { return g >= 1 ? g.toFixed(g < 10 ? 2 : 1) + ' billion light years' : Math.round(g * 1000) + ' million light years'; }
 function cosmoSentence(z) {
   const c = cosmo(z);
-  return 'Light left it ' + fmtGyr(c.lookback) + ' ago, when the universe was ' + fmtGyr(c.age) +
+  return 'We see it as it was when the universe was ' + fmtGyr(c.age) +
          ' old. Space has expanded since, so it is now about ' + fmtGly(c.comoving) + ' away.';
 }
 
@@ -3523,7 +3523,6 @@ function hexRgb(h) { const n = parseInt(h.slice(1), 16); return 'rgb(' + (n >> 1
       const c = cosmo(d.z);
       dAU = c.comoving * 1e9 * LY_AU; d.lookback = c.lookback;
       stats['Redshift'] = 'z = ' + d.z;
-      stats['Light left it'] = fmtGyr(c.lookback) + ' ago';
       stats['The universe was'] = fmtGyr(c.age) + ' old';
       stats['Distance now'] = fmtGly(c.comoving);
     } else {
@@ -3781,6 +3780,7 @@ canvas.addEventListener('wheel', function (e) {
    a telescope's patch of sky — magnifying the sky itself. Zooming out of a magnified
    view returns to the normal field of view before the camera starts moving. */
 function zoomBy(f) {
+  if (ladder.on) ladderStop();                               /* the viewer has taken the controls */
   const sel = selectedId && byId[selectedId];
   const magnified = cam.fovGoal < FOV_DEFAULT * 0.999;
   if (magnified || (f < 1 && sel && sel.kind === 'deepfield')) {
@@ -3853,6 +3853,7 @@ function sunlitAngles(o) {
 function flyTo(id) {
   const o = byId[id];
   if (!o) return;
+  if (ladder.on) ladderStop();
   if (o.kind === 'constellation' || o.kind === 'deepfield' || o.kind === 'ngc') {
     /* a direction, not a place — turn to look at it, and magnify a patch so it fills the view */
     const ang = o.angArcmin || 0;
@@ -4751,6 +4752,45 @@ function drawBeam() {
   ctx.restore();
 }
 
+/* ============================================================
+   Powers of ten — a ladder of x10 views from the Moon's orbit to the observable universe
+   ============================================================ */
+const ladder = { on: false, i: 0, auto: true, at: 0 };
+function ladderStart() {
+  if (deep.on) { toast('Leave deep time first'); return; }
+  if (typeof POWERS_OF_TEN === 'undefined' || !byId.earth) return;
+  beamStop(); closeRoute(); closeCompare(); if (!panel.classList.contains('hidden')) $('panelClose').click();
+  ladder.on = true; ladder.auto = true; $('ladderAuto').textContent = 'Pause';
+  select(null);                                             /* the card is the story; Earth's own panel would only cover it */
+  cam.flight = null; cam.follow = 'earth'; cam.fovGoal = FOV_DEFAULT; cam.pitchGoal = 0.42; cam.rollGoal = 0; cam.pendYaw = cam.pendPitch = 0;
+  updateFocusChip();
+  $('ladderHud').classList.remove('hidden'); $('btnLadder').classList.add('on');
+  ladderGo(0);
+}
+function ladderGo(i) {
+  ladder.i = clamp(i, 0, POWERS_OF_TEN.length - 1);
+  const r = POWERS_OF_TEN[ladder.i], au = Math.pow(10, r[0]);
+  cam.distGoal = clamp(au, MIN_DIST, MAX_DIST); ladder.at = performance.now(); idle = 0;
+  $('ladderPow').innerHTML = (r[0] < 0 ? '1/' + Math.pow(10, -r[0]) : r[0] <= 3 ? Math.pow(10, r[0]).toLocaleString() : '10<sup>' + r[0] + '</sup>') + ' AU';
+  $('ladderSize').textContent = 'seen from ' + (au < 0.02 ? (au * AU_KM / 1e6).toFixed(1) + ' million km' : au <= 1000 ? Math.round(au).toLocaleString() + ' AU' : fmtDist(au)) + ' away';
+  $('ladderText').textContent = r[1];
+  $('ladderStep').textContent = (ladder.i + 1) + ' / ' + POWERS_OF_TEN.length;
+  $('ladderNext').textContent = ladder.i === POWERS_OF_TEN.length - 1 ? 'Done' : 'Next ›';
+}
+function ladderStop() {
+  if (!ladder.on) return;
+  ladder.on = false;
+  $('ladderHud').classList.add('hidden'); $('btnLadder').classList.remove('on');
+}
+/* the rungs advance on their own every few seconds until the top, or until the viewer takes the controls */
+function ladderTick() {
+  if (!ladder.on || !ladder.auto) return;
+  if (performance.now() - ladder.at > 6000) {
+    if (ladder.i >= POWERS_OF_TEN.length - 1) { ladder.auto = false; $('ladderAuto').textContent = 'Play'; }
+    else ladderGo(ladder.i + 1);
+  }
+}
+
 /* ---- The best shot: how a real mission would actually go ---- */
 const REAL_TRIPS = {
   moon: 'Apollo 11 reached lunar orbit in about 3 days (16–19 July 1969) and landed on the fourth.',
@@ -5275,6 +5315,11 @@ $('routeBeam').addEventListener('click', function () {
 });
 $('btnBeam').addEventListener('click', function () { const o = selectedId && byId[selectedId]; if (o && o.pos) beamStart(o.pos, theName(o), null, ''); });
 $('beamStop').addEventListener('click', beamStop);
+$('btnLadder').addEventListener('click', function () { if (ladder.on) ladderStop(); else ladderStart(); });
+$('ladderPrev').addEventListener('click', function () { ladder.auto = false; $('ladderAuto').textContent = 'Play'; ladderGo(ladder.i - 1); });
+$('ladderNext').addEventListener('click', function () { if (ladder.i >= POWERS_OF_TEN.length - 1) { ladderStop(); return; } ladder.auto = false; $('ladderAuto').textContent = 'Play'; ladderGo(ladder.i + 1); });
+$('ladderAuto').addEventListener('click', function () { ladder.auto = !ladder.auto; ladder.at = performance.now(); $('ladderAuto').textContent = ladder.auto ? 'Pause' : 'Play'; });
+$('ladderExit').addEventListener('click', ladderStop);
 attachPicker('routeFrom', 'routeFromList', 'from');
 attachPicker('routeTo', 'routeToList', 'to');
 /* size comparison wiring */
@@ -5339,6 +5384,7 @@ function flyToNoHistory(id) {
 
 /* ---- home ---- */
 function goHome() {
+  ladderStop();
   cam.follow = null; cam.flight = null; selectedId = null; focusCategory = null;
   $('infoPanel').classList.add('hidden');
   panelDetail.classList.add('hidden');
@@ -5487,7 +5533,7 @@ function frame(now) {
   if (deep.on) { deepOverlay(); deepHud(); }
 
   statTick++;
-  beamTick();
+  beamTick(); ladderTick();
   if (route.open && statTick % 30 === 0) renderRoute();
   /* distances drift as the clock runs, so refresh them a few times a second */
   if (selectedId && byId[selectedId] && statTick % 20 === 0) renderStats(byId[selectedId]);
@@ -6285,7 +6331,7 @@ function deepEnd(show) {
   $('deepAgain').textContent = past ? 'Play it forward from here' : 'Watch again';
 }
 /* ---- in and out ---- */
-function deepStart(dir) {
+function deepStart(dir) { ladderStop();
   beamStop();
   dir = dir < 0 ? -1 : 1;
   if (deep.on) { deepRestart(dir); return; }
@@ -6375,7 +6421,7 @@ deepSlider.addEventListener('keydown', function (e) {
 canvas.addEventListener('pointerdown', function () { if (deep.on) deep.takeover = true; });
 canvas.addEventListener('wheel', function () { if (deep.on) deep.takeover = true; });
 
-window.OU = { beam: beam, beamStart: beamStart, beamStop: beamStop, beamRadius: beamRadius, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+window.OU = { ladder: ladder, ladderStart: ladderStart, ladderGo: ladderGo, ladderStop: ladderStop, beam: beam, beamStart: beamStart, beamStop: beamStop, beamRadius: beamRadius, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
               step: function (dt, noDraw) { dt = dt || 0.016; if (deep.on) deepTick(dt); updatePositions(simJd); if (deep.on) deepWorld(); if (deep.on && !deep.takeover) deepCamera(dt); updateCamera(dt); if (!noDraw) { render(dt); if (deep.on) { deepOverlay(); deepHud(); } } },

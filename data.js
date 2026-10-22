@@ -423,7 +423,13 @@ const EXOTIC = [
     ra:17.7611, dec:-29.0078, d: 26996, color:'#ffb45e',
     massSuns: 4.297e6, shadowKm: 2.4e7,
     desc:'The black hole at the centre of the Milky Way, 4.3 million times the mass of the Sun. Everything in the galaxy — including us — orbits it. The Event Horizon Telescope photographed its shadow in 2022.',
-    stats:{ 'Mass':'4.3 million Suns', 'Distance':'27,000 light years', 'Event horizon':'≈ 25 million km across', 'Orbital period of the Sun':'≈ 215 million years', 'First imaged':'12 May 2022' } }
+    stats:{ 'Mass':'4.3 million Suns', 'Distance':'27,000 light years', 'Event horizon':'≈ 25 million km across', 'Orbital period of the Sun':'≈ 215 million years', 'First imaged':'12 May 2022' } },
+  /* M87*: EHT 2019 (ApJL 875, L1): mass (6.5 ± 0.7) × 10^9 Suns, ring 42 ± 3 microarcseconds, distance 16.8 Mpc; horizon diameter from the mass, 2 × 2.953 km per solar mass */
+  { id:'m87star', name:'M87*', type:'Supermassive black hole', kind:'blackhole', aliases:['M87 black hole', 'M 87*', 'Powehi', 'Pōwehi', 'Virgo A black hole'], links:['m87'],
+    ra:12.5137, dec:12.391, d: 53500000, color:'#ffb45e',
+    massSuns: 6.5e9,
+    desc:'The black hole at the heart of the giant galaxy M87, and the first ever photographed: on 10 April 2019 the Event Horizon Telescope showed a ring of hot gas around a dark shadow about 42 millionths of an arcsecond across. Six and a half billion Suns of mass sit inside, driving a jet that reaches thousands of light years out of the galaxy. Hawaiian scholars named it Pōwehi, "the adorned fathomless dark creation".',
+    stats:{ 'Mass':'≈ 6.5 billion Suns', 'Distance':'53.5 million light years', 'Event horizon':'≈ 38 billion km across (≈ 260 AU)', 'Shadow in the image':'42 microarcseconds', 'First imaged':'10 April 2019 (data from April 2017)' } }
 ];
 
 /* ---------------- The Solar System as one thing, for sizes and the cosmic address ----------------
@@ -432,6 +438,37 @@ const EXOTIC = [
 const SOLAR_SYSTEM = { id:'solarsystem', name:'Solar System', rAU:50, color:'#ffd27a', aliases:['our solar system','the solar system','solar sys'], links:['sun','kuiperbelt','oortcloud'],
   desc:'The Sun and everything bound to it. Here it is taken out to the far edge of the Kuiper Belt, 50 AU from the Sun: the disc of the planets and the icy leftovers beyond Neptune. The Sun\'s wind reaches more than twice as far, to the heliopause that Voyager 1 crossed at 121 AU, and its gravity holds the Oort Cloud about two thousand times farther out.',
   stats:{ 'Width':'≈ 100 AU, to the outer edge of the Kuiper Belt', 'Planets':'8', 'Age':'≈ 4.57 billion years', 'Heliopause':'≈ 120 AU (Voyager 1 crossed it in 2012, at 121 AU)', 'Oort Cloud':'out to about 100,000 AU' } };
+
+/* ---------------- Powers of ten ----------------
+   Each rung is the camera's distance from Earth, 10^k AU; the frame then reaches about 0.45 of that above and below
+   Earth. The captions say what fits at that scale and what has just shrunk to a dot. Distances are the usual ones:
+   Moon 384,000 km; Venus no closer than 38 million km; Jupiter 5.2 AU, Neptune 30 AU, Kuiper Belt to 50 AU, Sedna out to
+   about 900 AU, Oort Cloud about 2,000-100,000 AU; Proxima 4.2 ly, Barnard's Star 6 ly, Sirius 8.6 ly, Aldebaran 65 ly,
+   Pleiades 444 ly, Betelgeuse about 550 ly, Orion Nebula 1,344 ly; Sagittarius Arm about 5,000 ly in, Perseus Arm about
+   6,000 ly out, galactic centre 27,000 ly; Milky Way 100,000 ly across, Magellanic Clouds 160,000-200,000 ly, Andromeda
+   2.5 and Triangulum 2.7 million ly, Centaurus A and M81 about 12 million ly, Virgo Cluster 54 million ly, Laniakea
+   about 520 million ly across, observable universe 46 billion ly in radius. */
+const POWERS_OF_TEN = [
+  [-2, 'Earth and the Moon\'s orbit, 384,000 km out: the farthest any person has travelled. Light crosses this frame in about five seconds.'],
+  [-1, 'Earth is a dot and the Moon\'s orbit a small ring. Nothing else lives here: Venus, the nearest planet, never comes closer than 38 million km.'],
+  [0, 'A frame the size of the Earth-Sun gap. Venus and Mars pass through at times, still tens of millions of km away; the Sun itself sits just beyond the edge, 150 million km off.'],
+  [1, 'The Sun and the inner planets. Jupiter\'s orbit, 5.2 AU across its radius, touches the edge; Saturn and the rest are still outside.'],
+  [2, 'The whole planetary system: Neptune at 30 AU and the Kuiper Belt out to 50 AU fill the frame. The Solar System you compare sizes against is this.'],
+  [3, 'The planets have shrunk to a dot in the middle. Out here only scattered icy bodies: Sedna swings out to about 900 AU at its farthest.'],
+  [4, 'Dark, empty space. The inner edge of the Oort Cloud lies about 2,000 AU out; light takes almost a month to cross this frame.'],
+  [5, 'The Oort Cloud, the Sun\'s last belongings, reaching out to about 100,000 AU. Light needs more than a year to cross the frame.'],
+  [6, 'The nearest stars: Proxima and Alpha Centauri at 4.2-4.4 light years, Barnard\'s Star at 6. Sirius, 8.6 light years away, is just outside.'],
+  [7, 'A few thousand stars, including many of the brightest in our sky: Vega, Arcturus, Capella, Altair, Fomalhaut, and Aldebaran near the edge at 65 light years.'],
+  [8, 'Our stretch of the Orion Spur: the Pleiades (444 light years), Betelgeuse (about 550) and the Hyades. The Orion Nebula, 1,344 light years away, is beyond the frame.'],
+  [9, 'A slice of the galaxy\'s disc: the Sagittarius Arm about 5,000 light years inward and the Perseus Arm about 6,000 outward. The galactic centre, 27,000 light years away, is outside.'],
+  [10, 'The Milky Way almost whole, 100,000 light years across; the far rim just clips the edge. The Magellanic Clouds, 160,000-200,000 light years away, lie beyond.'],
+  [11, 'The Milky Way with its dwarf companions, the Magellanic Clouds among them. Andromeda is still outside the frame, 2.5 million light years away.'],
+  [12, 'The Local Group: the Milky Way, Andromeda (2.5 million light years), Triangulum (2.7 million) and their dwarfs. The next groups, Centaurus A and M81 at about 12 million, lie beyond.'],
+  [13, 'The Virgo Supercluster: the Virgo Cluster 54 million light years away, the Local Void beside us, and thousands of galaxies.'],
+  [14, 'Laniakea, about 520 million light years across, and the great walls and voids of the cosmic web around it.'],
+  [15, 'Superclusters are grains now and the cosmic web a foam. Light from the edge of this frame takes some seven billion years to reach us.'],
+  [16, 'The observable universe: a ball 46 billion light years in radius, and everything in it. Beyond the ball, nothing can ever be seen.']
+];
 
 /* ---------------- Belts ---------------- */
 const BELTS = {
@@ -613,7 +650,7 @@ const DEEP_SKY = [
   { id:'m104', name:'Sombrero Galaxy', sub:'galaxy', cat:'galaxies', ra:12.6665, dec:-11.623, d:29500000, size:49000, color:'#e0dccb', tilt:0.05, flat:0.28,
     desc:'Seen almost exactly edge-on, with a brilliant bulge cut by a sharp dust lane — hence the hat.',
     stats:{ 'Type':'Lenticular / spiral', 'Distance':'29.5 million ly', 'Diameter':'≈49,000 ly' } },
-  { id:'m87', name:'M87', sub:'galaxy', cat:'galaxies', ra:12.5137, dec:12.391, d:53500000, size:132000, color:'#ece6d8', tilt:0, flat:0.9,
+  { id:'m87', name:'M87', links:['m87star'], aliases:['Virgo A', 'NGC 4486', 'Messier 87'], sub:'galaxy', cat:'galaxies', ra:12.5137, dec:12.391, d:53500000, size:132000, color:'#ece6d8', tilt:0, flat:0.9,
     desc:'A giant elliptical galaxy whose central black hole — 6.5 billion solar masses — was the first ever photographed, in 2019.',
     stats:{ 'Type':'Giant elliptical', 'Distance':'53.5 million ly', 'Central black hole':'6.5 billion Suns', 'First imaged':'10 April 2019' } },
   { id:'cena', name:'Centaurus A', sub:'galaxy', cat:'galaxies', ra:13.4245, dec:-43.019, d:13000000, size:60000, color:'#ded6c6', tilt:0.9, flat:0.8,
@@ -1142,7 +1179,7 @@ const DEEP_FIELDS = [
     desc:'A galaxy from the first billion years, stretched into a thin arc by the cluster WHL0137-08 in front of it. Along the arc sits a point of light that Hubble showed in 2022 to be a single star — Earendel — magnified thousands of times. Webb followed up and found it is probably a hot, massive star, possibly with a cooler companion.',
     stats:{ 'Hubble':'2016-2022, RELICS survey', 'Webb':'2022-2023', 'Lens':'Cluster WHL0137-08' },
     highlights:[
-      { name:'Earendel', z:5.926, ra:1.62311, dec:-8.4645, note:'The most distant single star known; its light left when the universe was under a billion years old.' } ] },
+      { name:'Earendel', z:5.926, ra:1.62311, dec:-8.4645, note:'The most distant single star known, seen as it was when the universe was under a billion years old.' } ] },
   { id:'pillars', scopes:['Hubble','JWST'], kind:'target', name:'Pillars of Creation', ra:18.31425, dec:-13.8167, arcmin:5, year:1995, con:'Serpens',
     color:'#e0b890', link:'m16',
     desc:'Hubble\'s most famous photograph, taken on 1 April 1995 and remade in 2014: three columns of cold gas in the Eagle Nebula, several light years tall, being eroded by the ultraviolet light of hot young stars nearby. Webb\'s 2022 infrared view sees through the dust to newborn stars glowing inside the tips of the pillars.',
@@ -1544,7 +1581,7 @@ const DEEP_UNIVERSE = [
     desc:'The compact component of the double radio source 3C 66, identified in 1974 and lying only 6 arcminutes from the unrelated radio galaxy 3C 66B, so close that the first TeV detections, by MAGIC in 2007 and VERITAS in 2008, disagreed about which of the two was shining. Its spectrum shows no lines, so its distance is only bracketed (redshift firmly above 0.33 and very probably below 0.41) and its black hole has no trustworthy mass estimate.',
     stats:{ 'Type':'BL Lac object', 'Identified':'1974 (optical counterpart of the radio source 3C 66, known since 1959)', 'Redshift':'z ≈ 0.34, uncertain: firmly above 0.335, below 0.41 at 99% confidence; the often-quoted 0.444 is unreliable', 'Brightest':'R ≈ 13.4 (2004, 2007, 2010)', 'TeV gamma rays':'VERITAS, 2008' } },
   { id:'3c454', massSuns:1.5e+09, massNote:'a middle value; estimates run from 0.3 to 4 billion depending on the method', name:'3C 454.3', sub:'blazar', ra:22.8994, dec:16.1482, z:0.859, jet:'us', prio:52, aliases:['3C454.3','PKS 2251+158','Crazy Diamond'],
-    desc:'A quasar in Pegasus seen almost straight down its jet, whose light left when the universe was about half its present age. In May 2005 it reached magnitude 12, the most luminous optical state recorded for a quasar up to then, and in November 2010 its gamma-ray flare briefly outshone every other source in the gamma-ray sky, five times brighter than the Vela pulsar.',
+    desc:'A quasar in Pegasus seen almost straight down its jet, seen as it was when the universe was about half its present age. In May 2005 it reached magnitude 12, the most luminous optical state recorded for a quasar up to then, and in November 2010 its gamma-ray flare briefly outshone every other source in the gamma-ray sky, five times brighter than the Vela pulsar.',
     stats:{ 'Type':'Flat-spectrum radio quasar', 'Redshift measured':'1967 (Lynds)', 'Brightest':'R 12.0 (May 2005)', 'Gamma-ray records':'December 2009 and November 2010 (Fermi, AGILE)', 'Nickname':'the Crazy Diamond, from the AGILE team' } },
   { id:'cta102', massSuns:8.5e+08, massNote:'from a compilation, not a direct measurement; its bright jet makes line-based estimates unreliable', name:'CTA 102', sub:'blazar', ra:22.5434, dec:11.7308, z:1.037, jet:'us', prio:52, aliases:['CTA102','PKS 2230+114','4C 11.69'],
     desc:'A quasar in Pegasus catalogued at Caltech in 1960 and briefly famous in April 1965, when Soviet astronomers announced that its flickering radio signal might come from an alien civilisation, a claim that did not survive its identification as a quasar billions of light years away, though it earned the object a song by The Byrds. Normally a faint 17th-magnitude speck, in December 2016 it brightened by six magnitudes to R 10.8, the most luminous optical state ever seen in a blazar.',
@@ -1592,7 +1629,7 @@ const DEEP_UNIVERSE = [
     desc:'One of the most distant galaxies confirmed, seen about 290 million years after the Big Bang — and surprisingly large and bright, with oxygen already in it, so stars had lived and died there even earlier.',
     stats:{ 'Found':'2024 (Webb)', 'Size':'≈1,700 light years' } },
   { id:'earendel', sizeNote:'No size has been measured for Earendel: it is an unresolved point of light. Lensing models first put its radius below about 4,000 times the Earth-Sun distance, but a 2025 study finds the limit could be as loose as about 10 light years, so it may be one giant star, several stars, or a small star cluster.', name:'Earendel', sub:'star', ra:1.62311, dec:-8.4645, z:5.926, aliases:['WHL0137-LS'],
-    desc:'The most distant single star ever seen, magnified thousands of times by a galaxy cluster in front of it. Its light left when the universe was under a billion years old. Its name is Old English for "morning star".',
+    desc:'The most distant single star ever seen, magnified thousands of times by a galaxy cluster in front of it. We see it as it was when the universe was under a billion years old. Its name is Old English for "morning star".',
     stats:{ 'Found':'2022 (Hubble)', 'Magnified':'Thousands of times' } }
 ];
 

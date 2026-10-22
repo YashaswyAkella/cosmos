@@ -431,6 +431,23 @@ button, input { font-family: inherit; }
 .route-note.about { margin: 10px 0 0; padding: 9px 11px; border-radius: 9px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); }
 .route-hint { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
 .focus-chip { z-index: 26; }
+.ladder-btn { width: auto; padding: 0 8px; font-weight: 700; font-size: 12.5px; letter-spacing: 0.01em; }
+.ladder-hud {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 24;
+  width: min(540px, calc(100% - 36px));
+  background: rgba(16,16,22,0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--card-border); border-radius: 14px; padding: 12px 14px 12px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+}
+.ladder-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.ladder-pow { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.ladder-pow sup { font-size: 13px; }
+.ladder-size { color: var(--muted); font-size: 12.5px; }
+.ladder-text { margin: 6px 0 10px; line-height: 1.5; font-size: 13px; color: #e2e2ea; }
+.ladder-ctl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ladder-step { color: var(--dim); font-size: 11.5px; margin: 0 4px; font-variant-numeric: tabular-nums; }
+.ladder-ctl #ladderExit { margin-left: auto; }
+@media (max-width: 640px) { .ladder-hud { top: 10px; left: 12px; right: 12px; transform: none; width: auto; padding: 10px 12px; } .ladder-text { font-size: 12.5px; } }
 .route-tools { display: flex; gap: 6px; flex-wrap: wrap; }
 .beam-hud {
   position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 23;
