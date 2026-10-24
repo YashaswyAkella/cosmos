@@ -3512,7 +3512,7 @@ function hexRgb(h) { const n = parseInt(h.slice(1), 16); return 'rgb(' + (n >> 1
 (function () {
   if (typeof DEEP_UNIVERSE === 'undefined') return;
   const MLY_AU = 1e6 * LY_AU;
-  const SUB = { quasar: 'Quasar', blazar: 'Blazar', lensed: 'Lensed quasar', cluster: 'Galaxy cluster', grb: 'Gamma-ray burst',
+  const SUB = { quasar: 'Quasar', blazar: 'Blazar', lensed: 'Lensed quasar', cluster: 'Galaxy cluster', grb: 'Gamma-ray burst', galaxy: 'Galaxy',
                 gw: 'Gravitational-wave source', frb: 'Fast radio burst', early: 'Early galaxy', star: 'Most distant star' };
   const rnd = mulberry32(20260929);
   const g1 = function () { return Math.sqrt(-2 * Math.log(1 - rnd() + 1e-12)) * Math.cos(TAU * rnd()); };
@@ -3532,7 +3532,7 @@ function hexRgb(h) { const n = parseInt(h.slice(1), 16); return 'rgb(' + (n >> 1
     if (d.approx) stats['Position'] = 'Approximate';
     d.stats = Object.assign(stats, d.stats || {});
     const dir = norm(raDecToVec(d.ra, d.dec, 1));
-    const rLy = d.sub === 'cluster' ? (d.rMly || 4) * 1e6 : (d.sub === 'quasar' || d.sub === 'blazar' || d.sub === 'lensed') ? 50000 : d.sub === 'early' ? 2000 : 30000;
+    const rLy = d.sub === 'cluster' ? (d.rMly || 4) * 1e6 : (d.sub === 'quasar' || d.sub === 'blazar' || d.sub === 'lensed') ? 50000 : (d.sub === 'galaxy' && d.sizeLy) ? d.sizeLy / 2 : d.sub === 'early' ? 2000 : 30000;
     const o = addObject({
       id: d.id, name: d.name, type: SUB[d.sub] + (d.z != null && d.z >= 1 ? ' · z ' + d.z : ''), kind: 'distant', sub: d.sub,
       category: 'deepuniverse', color: d.color || lookbackColor(d.lookback), radiusAU: rLy * LY_AU, dir: dir,
@@ -3978,16 +3978,32 @@ function openCategory(catId) {
   const ul = $('detailList');
   ul.innerHTML = '';
   const heading = function (t) { const li = document.createElement('li'); li.className = 'object-section'; li.textContent = t; ul.appendChild(li); };
+  /* some categories read better in sections; each section is [title, objects] */
+  let sections = null;
   if (catId === 'clusters' && typeof FAMOUS_CLUSTER_IDS !== 'undefined') {
     /* the well-known ones first, in their own section, then everything else */
     const famous = FAMOUS_CLUSTER_IDS.map(function (id) { return byId[id]; }).filter(Boolean);
-    const rest = list.filter(function (o) { return FAMOUS_CLUSTER_IDS.indexOf(o.id) < 0; });
-    list = famous.concat(rest);
-    heading('Famous clusters');
-    list.famousEnd = famous.length;
+    sections = [['Famous clusters', famous], ['More clusters', list.filter(function (o) { return FAMOUS_CLUSTER_IDS.indexOf(o.id) < 0; })]];
+  } else if (catId === 'deepuniverse') {
+    /* by kind; quasars and blazars nearest first */
+    const byZ = function (a, b) { return (a.data.z || 0) - (b.data.z || 0); };
+    const of = function (subs) { return list.filter(function (o) { return o.kind === 'distant' && subs.indexOf(o.sub) >= 0; }); };
+    const webb = list.filter(function (o) { return o.kind === 'distant' && o.data.webb; }).sort(byZ);
+    sections = [['Quasars', of(['quasar']).sort(byZ)], ['Lensed quasars', of(['lensed']).sort(byZ)], ['Blazars', of(['blazar']).sort(byZ)],
+                ['Galaxies revealed by Webb', webb],
+                ['Galaxy clusters', of(['cluster'])], ['Explosions and signals', of(['grb', 'gw', 'frb'])],
+                ['The first galaxies and the farthest star', of(['early', 'star']).filter(function (o) { return !o.data.webb; })],
+                ['Walls and voids', list.filter(function (o) { return o.kind === 'region'; })]];
+    const placed = {}; sections.forEach(function (s) { s[1].forEach(function (o) { placed[o.id] = 1; }); });
+    const other = list.filter(function (o) { return !placed[o.id]; });
+    if (other.length) sections.push(['More', other]);
   }
-  list.forEach(function (o, idx) {
-    if (list.famousEnd != null && idx === list.famousEnd) heading('More clusters');
+  if (sections) {
+    list = [];
+    sections.forEach(function (s) { if (s[1].length) { s[1].sectionTitle = s[0]; list = list.concat([{ section: s[0], count: s[1].length }], s[1]); } });
+  }
+  list.forEach(function (o) {
+    if (o.section) { heading(o.section + (catId === 'deepuniverse' ? ' · ' + o.count : '')); return; }
     const li = document.createElement('li');
     const badge = o.kind === 'deepfield' ? (o.data.planned ? 'planned' : String(o.data.year))
                 : o.kind === 'constellation' ? o.data.area.toLocaleString() + ' sq°'
