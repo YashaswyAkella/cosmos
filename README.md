@@ -20,7 +20,7 @@ A hand-built 3D map of the cosmos that runs in the browser with no libraries, no
 
 ## Feedback wanted
 
-This is a beta. It works best on a laptop or desktop; the phone layout is not finished yet.
+This is a beta. It works on laptops, desktops and phones: the phone layout has been updated so the panels fit a narrow screen and touch gestures work (see below).
 
 
 ## Good to know
