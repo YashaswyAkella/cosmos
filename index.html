@@ -116,7 +116,6 @@
         <button class="btn primary" id="btnGoto">Fly here</button>
         <button class="btn" id="btnRoute" title="How long would the trip take?">Trip</button>
         <button class="btn" id="btnCompare" title="Compare its size with something else">Size</button>
-        <button class="btn" id="btnBeam" title="Send a pulse of light out from here and watch it spread">Light</button>
       </div>
     </aside>
 
@@ -227,13 +226,6 @@
       <div><button class="btn tiny" id="deepAgain">Watch again</button><button class="btn primary tiny" id="deepEndExit">Back to today</button></div>
     </div>
 
-    <div class="beam-hud hidden" id="beamHud">
-      <span class="beam-dot"></span>
-      <div class="beam-text"><div id="beamLine1">—</div><div class="beam-sub" id="beamLine2"></div></div>
-      <button id="beamStop" title="Stop the light">
-        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
 
     <div class="ladder-hud hidden" id="ladderHud">
       <div class="ladder-head"><span class="ladder-pow" id="ladderPow"></span><span class="ladder-size" id="ladderSize"></span></div>
@@ -263,7 +255,7 @@
       <h2>Plan a trip</h2>
       <div class="route-row"><label>From</label><div class="picker"><input id="routeFrom" type="text" autocomplete="off" placeholder="Earth"><div class="picker-list" id="routeFromList"></div></div></div>
       <div class="route-row"><label>To</label><div class="picker"><input id="routeTo" type="text" autocomplete="off" placeholder="Search a destination…"><div class="picker-list" id="routeToList"></div></div></div>
-      <div class="route-tools"><button class="btn tiny" id="routeSwap">Swap</button><button class="btn tiny" id="routeBeam" title="Send a pulse of light from the start and watch it cross">Watch the light go</button></div>
+      <div class="route-tools"><button class="btn tiny" id="routeSwap">Swap</button></div>
       <div id="routeResult"></div>
     </section>
 
