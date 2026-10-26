@@ -18,11 +18,6 @@ A hand-built 3D map of the cosmos that runs in the browser with no libraries, no
 - The deep universe: 35 famous quasars and blazars, from 3C 273 and TON 618 to the neutrino blazar TXS 0506+056, the TeV blazars Markarian 421 and 501, Andromeda's Parachute and J0529−4351, the most luminous object known, the Einstein Cross, the Bullet Cluster, gravitational-wave and gamma-ray-burst sources, the first galaxies, 13 galaxies revealed by the James Webb Space Telescope (from MoM-z14, the most distant galaxy confirmed, to the early spirals Zhúlóng and Alaknanda), the distant lensing cluster XLSSC 122, and the great walls and voids of the cosmic web, each placed by its measured distance or redshift and coloured by how long its light has travelled. Each one gives two distances: the light-travel distance (how long its light has been on its way to us) and the distance now, which is larger because space kept expanding while the light travelled. The outlines of superclusters and voids are drawn at their published sizes; their real edges are irregular.
 - 88 constellations by name, Sagittarius A*, pulsars, magnetars and black holes.
 
-## Feedback wanted
-
-This is a beta. It works on laptops, desktops and phones: the phone layout has been updated so the panels fit a narrow screen and touch gestures work (see below).
-
-
 ## Good to know
 
 - Positions of the planets, Moon, asteroids and comets are computed from published orbits. They are most accurate near the present: the planets stay close for a few thousand years either way, while asteroids and comets slowly drift from their true places over decades. Spacecraft and satellite positions are approximate.
