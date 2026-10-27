@@ -49,7 +49,6 @@ button, input { font-family: inherit; }
   background: none; border: none; color: inherit; cursor: pointer; padding: 4px 2px;
 }
 .brand-name { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-.brand-beta { font-size: 11px; color: var(--muted); font-weight: 500; }
 
 .search-wrap { position: relative; margin-left: 6px; }
 .search-input {
@@ -497,7 +496,6 @@ button, input { font-family: inherit; }
 @media (max-width: 640px) {
   .topbar { padding: 0 10px; }
   .topbar-left { flex: 1 1 auto; min-width: 0; gap: 6px; }
-  .brand-beta { display: none; }
   .search-wrap { flex: 1 1 auto; min-width: 0; margin-left: 0; }
   .search-input { width: 100%; min-width: 0; }
   .search-results { position: fixed; top: 50px; left: 12px; right: 12px; width: auto; max-height: 55vh; }
