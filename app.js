@@ -5443,6 +5443,7 @@ function frame(now) {
 
   statTick++;
   ladderTick();
+  syncHash(false);
   if (route.open && statTick % 30 === 0) renderRoute();
   /* distances drift as the clock runs, so refresh them a few times a second */
   if (selectedId && byId[selectedId] && statTick % 20 === 0) renderStats(byId[selectedId]);
@@ -6329,7 +6330,118 @@ deepSlider.addEventListener('keydown', function (e) {
 canvas.addEventListener('pointerdown', function () { if (deep.on) deep.takeover = true; });
 canvas.addEventListener('wheel', function () { if (deep.on) deep.takeover = true; });
 
-window.OU = { ladder: ladder, ladderStart: ladderStart, ladderGo: ladderGo, ladderStop: ladderStop, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+/* ============================================================
+   Shareable links
+   The address keeps up with what is on screen: #alaknanda for a selected object, #trip=earth,proxima for a trip,
+   #size=earth,betelgeuse for a size comparison. Opening such a link restores it, Back and Forward step through it,
+   and a link may also name a thing (#Andromeda Galaxy). Catalogue rows are named by their row (hyg, gal, sb, sat,
+   ngc_, exo_ + index), which stays valid as long as the catalogue files are not rebuilt.
+   ============================================================ */
+const LIVE_URL = 'https://yashaswyakella.github.io/cosmos/';     /* a link copied from a local file points to the live site */
+const BASE_TITLE = document.title;
+let hashNow = '';
+function hashOf() {
+  if (route.open && route.from && route.to) return 'trip=' + encodeURIComponent(route.from) + ',' + encodeURIComponent(route.to);
+  if (compare.open && compare.a && compare.b) return 'size=' + encodeURIComponent(compare.a) + ',' + encodeURIComponent(compare.b);
+  if (selectedId && byId[selectedId]) return encodeURIComponent(selectedId);
+  return '';
+}
+function titleOf() {
+  const nm = function (id) { return byId[id] ? byId[id].name : id; };
+  if (route.open && route.from && route.to) return 'Trip from ' + nm(route.from) + ' to ' + nm(route.to) + ' · Cosmos';
+  if (compare.open && compare.a && compare.b) return nm(compare.a) + ' and ' + nm(compare.b) + ' to scale · Cosmos';
+  if (selectedId && byId[selectedId]) return byId[selectedId].name + ' · Cosmos';
+  return BASE_TITLE;
+}
+/* called every frame; a change becomes a new browser history entry, so Back undoes it */
+function syncHash(replace) {
+  if (deep.on || ladder.on) return;
+  const h = hashOf();
+  if (h === hashNow) return;
+  hashNow = h;
+  document.title = titleOf();
+  try { window.history[replace ? 'replaceState' : 'pushState'](null, '', location.href.split('#')[0] + (h ? '#' + h : '')); }
+  catch (e) { if (!replace) try { location.hash = h; } catch (e2) { /* no history at all: the link button still works */ } }
+}
+/* an id, a catalogue row, or a name or alias written into the link by hand */
+function resolveRef(s) {
+  s = (s || '').trim();
+  if (!s) return null;
+  if (byId[s]) return s;
+  const m = /^(hyg|gal|sb|sat|ngc_|exo_)(\d+)$/.exec(s);
+  if (m) {
+    const k = +m[2], mk = { hyg: [bulkStars, bulkStarObject], gal: [bulkGal, bulkGalObject], sb: [bulkSbdb, bulkSbdbObject],
+                            sat: [bulkSat, bulkSatObject], ngc_: [bulkDso, bulkDsoObject], exo_: [bulkExo, bulkExoObject] }[m[1]];
+    return (mk[0] && k < mk[0].n) ? mk[1](k).id : null;
+  }
+  const key = function (t) { return String(t).toLowerCase().replace(/[\s_\-−'’.]+/g, ''); }, q = key(s);
+  let best = null;
+  objects.forEach(function (o) {
+    const names = [o.name, o.id].concat((o.data && o.data.aliases) || []);
+    if (names.some(function (n) { return key(n) === q; }) && (!best || (o.prio || 0) > (best.prio || 0))) best = o;
+  });
+  if (best) return best.id;
+  const low = s.toLowerCase() + ' ';                   /* "Sirius" is Sirius A: a whole first word, the most prominent first */
+  objects.forEach(function (o) { if (o.name.toLowerCase().indexOf(low) === 0 && (!best || (o.prio || 0) > (best.prio || 0))) best = o; });
+  if (best) return best.id;
+  const rows = [];
+  searchBulk(s.toLowerCase(), rows, 20);
+  for (let i = 0; i < rows.length; i++) if (key(rows[i].name) === q) return rows[i].promote().id;
+  return null;
+}
+function applyHash() {
+  let raw = location.hash.replace(/^#/, '');
+  try { raw = decodeURIComponent(raw); } catch (e) { /* keep it as typed */ }
+  if (raw === hashNow) return;
+  hashNow = raw;
+  if (deep.on) deepStop();
+  if (ladder.on) ladderStop();
+  const m = /^(trip|size)=([^,]+),(.+)$/.exec(raw);
+  let ok = true;
+  if (!raw) { closeRoute(); closeCompare(); select(null); }
+  else if (m) {
+    const a = resolveRef(m[2]), b = resolveRef(m[3]);
+    if (a && b) { if (m[1] === 'trip') openRoute(a, b); else openCompare(a, b); }
+    else ok = false;
+  } else {
+    const id = resolveRef(raw);
+    if (id) { closeRoute(); closeCompare(); select(id); flyTo(id); }
+    else ok = false;
+  }
+  if (!ok) toast('This link names something Cosmos does not have');
+  syncHash(true);                               /* tidy the address: a name typed by hand becomes the id */
+  document.title = titleOf();
+}
+window.addEventListener('popstate', applyHash);
+window.addEventListener('hashchange', applyHash);
+
+function shareView() {
+  syncHash(true);
+  const h = location.hash, url = location.protocol === 'file:' ? LIVE_URL + h : location.href;
+  const what = route.open ? 'this trip' : compare.open ? 'this comparison' : (selectedId && byId[selectedId]) ? byId[selectedId].name : 'Cosmos';
+  if (navigator.share && navigator.maxTouchPoints > 0 && window.matchMedia('(pointer: coarse)').matches) {
+    navigator.share({ title: document.title, url: url }).catch(function () { /* the viewer closed the share sheet */ });
+    return;
+  }
+  const done = function () { toast('Link copied · it opens ' + what); };
+  const fallback = function () {
+    const ta = document.createElement('textarea');
+    ta.value = url; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch (e) { /* not allowed here */ }
+    ta.remove();
+    if (copied) done(); else window.prompt('Copy this link:', url);
+  };
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(done, fallback);
+  else fallback();
+}
+$('btnShare').addEventListener('click', shareView);
+$('routeShare').addEventListener('click', shareView);
+$('compareShare').addEventListener('click', shareView);
+if (location.hash.length > 1) applyHash();
+
+window.OU = { applyHash: applyHash, hashOf: hashOf, resolveRef: resolveRef, shareView: shareView, ladder: ladder, ladderStart: ladderStart, ladderGo: ladderGo, ladderStop: ladderStop, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
               step: function (dt, noDraw) { dt = dt || 0.016; if (deep.on) deepTick(dt); updatePositions(simJd); if (deep.on) deepWorld(); if (deep.on && !deep.takeover) deepCamera(dt); updateCamera(dt); if (!noDraw) { render(dt); if (deep.on) { deepOverlay(); deepHud(); } } },

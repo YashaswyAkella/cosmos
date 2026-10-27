@@ -15,7 +15,6 @@
     <div class="topbar-left">
       <button class="brand" id="brandHome" title="Return to home view">
         <span class="brand-name">Cosmos</span>
-        <span class="brand-beta">beta</span>
       </button>
 
       <div class="search-wrap">
@@ -116,6 +115,7 @@
         <button class="btn primary" id="btnGoto">Fly here</button>
         <button class="btn" id="btnRoute" title="How long would the trip take?">Trip</button>
         <button class="btn" id="btnCompare" title="Compare its size with something else">Size</button>
+        <button class="btn" id="btnShare" title="Copy a link that opens this">Share</button>
       </div>
     </aside>
 
@@ -255,7 +255,7 @@
       <h2>Plan a trip</h2>
       <div class="route-row"><label>From</label><div class="picker"><input id="routeFrom" type="text" autocomplete="off" placeholder="Earth"><div class="picker-list" id="routeFromList"></div></div></div>
       <div class="route-row"><label>To</label><div class="picker"><input id="routeTo" type="text" autocomplete="off" placeholder="Search a destination…"><div class="picker-list" id="routeToList"></div></div></div>
-      <div class="route-tools"><button class="btn tiny" id="routeSwap">Swap</button></div>
+      <div class="route-tools"><button class="btn tiny" id="routeSwap">Swap</button><button class="btn tiny" id="routeShare" title="Copy a link to this trip">Share</button></div>
       <div id="routeResult"></div>
     </section>
 
@@ -268,7 +268,7 @@
       <div class="route-row"><label>This</label><div class="picker"><input id="compareA" type="text" autocomplete="off" placeholder="Earth"><div class="picker-list" id="compareAList"></div></div></div>
       <div class="route-row"><label>With</label><div class="picker"><input id="compareB" type="text" autocomplete="off" placeholder="Search anything…"><div class="picker-list" id="compareBList"></div></div></div>
       <div class="compare-quick" id="compareQuick">
-        <button class="btn tiny" id="compareSwap">Swap</button>
+        <button class="btn tiny" id="compareSwap">Swap</button><button class="btn tiny" id="compareShare" title="Copy a link to this comparison">Share</button>
         <button class="btn tiny" data-id="moon">Moon</button><button class="btn tiny" data-id="earth">Earth</button><button class="btn tiny" data-id="jupiter">Jupiter</button>
         <button class="btn tiny" data-id="sun">Sun</button><button class="btn tiny" data-id="betelgeuse">Betelgeuse</button><button class="btn tiny" data-id="sgrA">Sgr A*</button><button class="btn tiny" data-id="solarsystem">Solar System</button><button class="btn tiny" data-id="milkyway">Milky Way</button>
       </div>
