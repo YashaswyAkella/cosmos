@@ -429,7 +429,122 @@ const EXOTIC = [
     ra:12.5137, dec:12.391, d: 53500000, color:'#ffb45e',
     massSuns: 6.5e9,
     desc:'The black hole at the heart of the giant galaxy M87, and the first ever photographed: on 10 April 2019 the Event Horizon Telescope showed a ring of hot gas around a dark shadow about 42 millionths of an arcsecond across. Six and a half billion Suns of mass sit inside, driving a jet that reaches thousands of light years out of the galaxy. Hawaiian scholars named it Pōwehi, "the adorned fathomless dark creation".',
-    stats:{ 'Mass':'≈ 6.5 billion Suns', 'Distance':'53.5 million light years', 'Event horizon':'≈ 38 billion km across (≈ 260 AU)', 'Shadow in the image':'42 microarcseconds', 'First imaged':'10 April 2019 (data from April 2017)' } }
+    stats:{ 'Mass':'≈ 6.5 billion Suns', 'Distance':'53.5 million light years', 'Event horizon':'≈ 38 billion km across (≈ 260 AU)', 'Shadow in the image':'42 microarcseconds', 'First imaged':'10 April 2019 (data from April 2017)' } },
+  /* more black holes in other galaxies and middleweights (2026-10-29); agn:true marks an active nucleus */
+/* Omega Centauri IMBH candidate: Häberle et al. 2024, Nature 631, 285 (arXiv:2405.06015): 7 fast stars within 3" (0.08 pc) of the AvdM10 centre; "firm lower limit of the black hole mass of ~8,200 Msun" from velocities alone; 21,100 Msun (99%) when accelerations are modelled; N-body models with 39,000 and 47,000 Msun are "most consistent" (fast-star fraction best matched by 39,000, overall velocity distribution by 47,000); no IMBH, a stellar-BH cluster, or > 50,000 "strongly ruled out". massSuns = 39,000, one of those two published model masses. Counter-claim: Bañares-Hernández et al. 2025, A&A 693, A104 (arXiv:2408.00939), stellar kinematics + pulsar accelerations: extended central mass ~2–3 × 10^5 Msun favoured over an IMBH, 3σ upper limit 6 × 10^3 Msun. Centre: Anderson & van der Marel 2010 (arXiv:0905.0627) 13:26:47.24 −47:28:46.45 (Häberle's preferred IMBH position is 0.77" NE of it). Distance 5.43 kpc (Baumgardt & Vasiliev 2021, adopted by Häberle) → 17,710 ly. NOTE: the app's omegacen entry still has d:15800; it should be updated to 17,700 so the two coincide. */
+  { id:'omegacenbh', name:'Omega Centauri black hole', type:'Intermediate-mass black hole (candidate)', kind:'blackhole', imbh:true, aliases:['ω Cen IMBH','Omega Cen IMBH','Omega Centauri IMBH','NGC 5139 black hole'], links:['omegacen'],
+    ra:13.44646, dec:-47.4796, d: 17700, color:'#ffb45e', massSuns: 3.9e4,
+    massNote:'the lighter of the two best-fitting models, 39,000 and 47,000; the fast stars alone require at least 8,200, and a 2025 study puts any black hole there below 6,000',
+    desc:'A possible middleweight black hole at the heart of Omega Centauri, the most massive globular cluster of the Milky Way. In 2024 a team using twenty years of Hubble images found seven stars near the centre moving faster than the cluster\'s gravity alone could hold, so something of at least 8,200 Suns must be keeping them there; their computer models fit best with about 39,000 to 47,000 Suns. It is still disputed: a 2025 study that adds the motions of pulsars in the cluster prefers a spread-out swarm of dead stars, and allows a black hole of no more than about 6,000 Suns.',
+    stats:{ 'Mass':'≥ 8,200 Suns; models ≈ 39,000–47,000', 'Distance':'≈17,700 light years',
+            'Evidence':'7 fast-moving stars (Hubble)', 'Status':'Candidate, disputed', 'Reported':'2024' } },
+  /* HLX-1: Farrell et al. 2009, Nature 460, 73 (discovery in XMM-Newton data; > 500 Msun). Association with ESO 243-49 and 95 Mpc: Wiersema et al. 2010, ApJL 721, L102 (arXiv:1008.4125); peak 0.2–10 keV luminosity 1.2 × 10^42 erg/s. Mass ~2 × 10^4 Msun: Godet et al. 2012, ApJ 752, 34 (arXiv:1204.3461), disc fits assuming a non-spinning hole seen face-on. Other estimates: 9 × 10^3 – 9 × 10^4 (Webb et al. 2012, Science 337, 554, radio flares); 6,300 – 191,700 over all spins and tilts (Straub et al. 2014, A&A 569, A116). Minor-merger origin proposed by Farrell et al. 2012, ApJL 747, L13 (arXiv:1110.6510). Distance 95 Mpc → 310 million ly (computed). Position: SIMBAD [FWB2009] HLX-1, checked. */
+  { id:'hlx1', name:'HLX-1', type:'Intermediate-mass black hole (candidate)', kind:'blackhole', imbh:true, aliases:['ESO 243-49 HLX-1','2XMM J011028.1-460421','Hyper-Luminous X-ray source 1'],
+    ra:1.17453, dec:-46.0729, d: 310000000, color:'#ffb45e', massSuns: 2.0e4,
+    massNote:'one model\'s estimate; others run from about 6,000 to 190,000',
+    desc:'An extremely bright X-ray source on the outskirts of the galaxy ESO 243-49, picked out in 2009 from XMM-Newton data. At its peak it gives off about 400 times more X-rays than a black hole of 20 Suns should be able to, so it is one of the best candidates for a middleweight black hole. In its first years of monitoring it flared up roughly once a year. It may have arrived with a small galaxy that ESO 243-49 swallowed.',
+    stats:{ 'Mass':'≈ 20,000 Suns (estimates 6,000–190,000)', 'Distance':'≈310 million light years',
+            'Host':'Edge of galaxy ESO 243-49', 'Found':'2009 (XMM-Newton)', 'Status':'Candidate' } },
+  /* NGC 4395 nucleus: 9,100 +1,500/−1,600 Msun ("about 10,000") from an 83 ± 14 min Hα reverberation lag: Woo et al. 2019, Nature Astronomy 3, 755 (arXiv:1905.00145); 4 (+8/−3) × 10^5 (3σ) from H2 gas dynamics: den Brok et al. 2015, ApJ 809, 101 (arXiv:1507.04358); (3.6 ± 1.1) × 10^5 from C IV reverberation: Peterson et al. 2005, ApJ 632, 799. Woo et al. quote the literature range 10^4 – 5 × 10^5. Distance 4.4 Mpc adopted by den Brok et al. 2015 (between Cepheid 4.0/4.3 and TRGB 4.6/4.76 Mpc) → 14.35 million ly (computed). Position: SIMBAD, checked. */
+  { id:'ngc4395bh', name:'NGC 4395 black hole', type:'Intermediate-mass black hole (candidate), dwarf Seyfert nucleus', kind:'blackhole', imbh:true, aliases:['NGC 4395 nucleus','NGC 4395 AGN'],
+    ra:12.43024, dec:33.5469, d: 14400000, color:'#ffb45e', massSuns: 9.1e3,
+    massNote:'from the timing of light echoes; gas motions and an earlier echo study give about 40 times more',
+    desc:'A small, actively feeding black hole at the centre of NGC 4395, a faint dwarf spiral with no central bulge. Its light flickers so quickly that the echo from surrounding gas arrives only about 83 minutes later, which points to about 10,000 Suns. Other methods, from the motions of gas and earlier echo timing, give about 40 times more, so its true weight is still argued over.',
+    stats:{ 'Mass':'≈ 9,100 Suns; other methods ≈ 400,000', 'Distance':'≈14 million light years',
+            'Host':'Dwarf spiral NGC 4395', 'Light echo':'≈83 minutes (2019)' } },
+/* ---- Supermassive black holes in nearby galaxies: quiet ones ---- */
+  /* M31*: Bender et al. 2005, ApJ 631, 280: 1.4 (1-sigma 1.1–2.3) × 10^8 Suns from the P3 disc; P3 = A-type stars, ~200 Myr, peak velocity dispersion 1183 ± 201 km/s (the "up to 1000 km/s" in that abstract refers to RED stars near P2, not P3); distance = the app's M31 entry */
+  { id:'m31star', name:'M31*', type:'Supermassive black hole', kind:'blackhole', aliases:['M31 black hole', 'M 31*', 'Andromeda black hole', 'Andromeda\'s black hole'], links:['m31'],
+    ra:0.71232, dec:41.2691, d: 2537000, color:'#ffb45e', massSuns: 1.4e8, agn:false,
+    desc:'The black hole at the centre of the Andromeda Galaxy, about 140 million Suns, some 30 times the mass of the Milky Way\'s. Andromeda\'s core looks double because an off-centre disc of old stars circles the black hole. Hubble also found a tiny cluster of young blue stars, about 200 million years old, orbiting so close and so fast that it gives the black hole\'s mass. Today the black hole is very quiet and feeds only faintly.',
+    stats:{ 'Mass':'≈ 140 million Suns (110–230 million)', 'Method':'Orbits of the blue star cluster P3 (Hubble)', 'Distance':'2.5 million light years', 'Host':'Andromeda Galaxy (M31)' } },
+  /* M32: van den Bosch & de Zeeuw 2010, MNRAS 401, 1770: (2.4 ± 1.0) × 10^6 at 0.79 Mpc (Kormendy & Ho 2013: 2.45 (1.43–3.46) × 10^6 at 0.805 Mpc); first dynamical BH case: Tonry 1984, 1987 (5.8 and 7.5 × 10^6), Dressler & Richstone 1988 (9.3 × 10^6), per KH13 §2 and Table 2; distance = the app's M32 entry */
+  { id:'m32bh', name:'M32 black hole', type:'Supermassive black hole', kind:'blackhole', aliases:['M 32 black hole', 'M32*'], links:['m32', 'm31'],
+    ra:0.71163, dec:40.8654, d: 2490000, color:'#ffb45e', massSuns: 2.4e6, agn:false,
+    desc:'M32 is a small, dense elliptical galaxy orbiting Andromeda, and its centre holds a black hole of about 2.4 million Suns, a little over half the mass of the Milky Way\'s. It is where the first case for a black hole from the motions of stars was made, in the 1980s, though those early estimates came out two to four times too high. It shows almost no activity.',
+    stats:{ 'Mass':'≈ 2.4 million Suns (± 1.0 million)', 'Method':'Star motions (orbit models)', 'Distance':'≈ 2.5 million light years', 'Host':'M32, a satellite of Andromeda' } },
+  /* Sombrero: Jardel et al. 2011, ApJ 739, 21: (6.6 ± 0.4) × 10^8 (KH13: 6.65 (6.24–7.05) × 10^8 at 9.87 Mpc); discovery Kormendy 1988b; HST confirmation Kormendy et al. 1996a (~1.1 × 10^9, "not very accurate", KH13); faint nucleus: Pellegrini et al. 2003 (Chandra/XMM, L(2–10 keV) ≈ 1.5 × 10^40 erg/s), Hada et al. 2013 (VLBA radio core and jet); distance = the app's M104 entry (TRGB 9.55 Mpc = 31.1 Mly, McQuinn et al. 2016, AJ 152, 144) */
+  { id:'m104bh', name:'Sombrero black hole', type:'Supermassive black hole', kind:'blackhole', aliases:['Sombrero Galaxy black hole', 'M104 black hole', 'M 104 black hole', 'NGC 4594 black hole'], links:['m104'],
+    ra:12.66651, dec:-11.6231, d: 29500000, color:'#ffb45e', massSuns: 6.6e8, agn:false,
+    desc:'The Sombrero Galaxy\'s central black hole weighs about 660 million Suns, roughly 150 times the Milky Way\'s. It was one of the first giant black holes found from the motions of stars, in 1988, and Hubble later confirmed it. Its nucleus glows faintly in radio and X-rays, a sign of slow, weak feeding.',
+    stats:{ 'Mass':'≈ 660 million Suns (older models up to ≈ 1.1 billion)', 'Method':'Star motions (orbit models)', 'Distance':'≈ 29–31 million light years', 'Host':'Sombrero Galaxy (M104)' } },
+  /* NGC 3115: Emsellem, Dejonghe & Bacon 1999, as adopted by Kormendy & Ho 2013: 8.97 (6.20–9.54) × 10^8 at 9.54 Mpc; other published values 5 × 10^8 to 2 × 10^9 (KH13 notes); Chandra Bondi flow: Wong et al. 2011, ApJL 736, L23 (Bondi radius 4–5", implied ~2 × 10^9, temperature rising inward; the authors' own "first" claim) */
+  { id:'ngc3115bh', name:'NGC 3115 black hole', type:'Supermassive black hole', kind:'blackhole', aliases:['NGC 3115', 'Caldwell 53'],
+    ra:10.08722, dec:-7.7186, d: 31100000, color:'#ffb45e', massSuns: 9.0e8, agn:false,
+    desc:'An edge-on, lens-shaped galaxy in Sextans holding a black hole of nearly a billion Suns, one of the nearest that heavy. In 2011 the Chandra X-ray telescope traced hot gas growing hotter towards the centre, inside the zone where the black hole\'s gravity takes control; the team reported it as the first time gas had been followed that far in around a supermassive black hole. Yet the nucleus barely shines, so very little of that gas seems to reach the black hole.',
+    stats:{ 'Mass':'≈ 0.9 billion Suns (published 0.5–2 billion)', 'Method':'Star motions; X-ray gas points to the high end', 'Distance':'≈ 31 million light years', 'Galaxy':'Edge-on lenticular (S0)' } },
+  /* NGC 4889: McConnell et al. 2011, Nature 480, 215 (68% range 0.6–3.7 × 10^10, midpoint 2.1 × 10^10 adopted) and 2012, ApJ 756, 179 (2.1 ± 1.6 × 10^10, 103.2 Mpc comoving); quasar-remnant suggestion: same Nature paper; distance = the app's Coma Cluster entry */
+  { id:'ngc4889bh', name:'NGC 4889 black hole', type:'Supermassive black hole', kind:'blackhole', aliases:['NGC 4889', 'Caldwell 35'], links:['comacluster'],
+    ra:13.00226, dec:27.9769, d: 321000000, color:'#ffb45e', massSuns: 2.1e10, agn:false,
+    desc:'The brightest galaxy in the Coma Cluster has one of the heaviest black holes measured nearby, about 21 billion Suns. Its mass came from the speeds of stars near the centre, published in 2011, but the uncertainty is large: anywhere from about 6 to 37 billion Suns. It is quiet now; its discoverers suggested that black holes this big are the dormant remains of the brilliant quasars of the early universe.',
+    stats:{ 'Mass':'≈ 21 billion Suns (≈ 6–37 billion)', 'Method':'Star motions (orbit models)', 'Distance':'≈ 320–340 million light years', 'Redshift':'z = 0.0215' } },
+  /* Holm 15A: Mehrgan et al. 2019, ApJ 887, 195: (4.0 ± 0.80) × 10^10, "the most massive black hole with a direct dynamical detection in the local universe"; z = 0.055; cusp radius 3.7" = 4.11 kpc ≈ 13,400 ly; merger of two cored galaxies favoured; no larger stellar-dynamical mass found as of October 2026. Lensing comparisons: Abell 1201 BCG 3.27 ± 2.12 × 10^10 (Nightingale et al. 2023, MNRAS 521, 3298, z = 0.169); Cosmic Horseshoe 3.6 × 10^10 (Melo-Carneiro et al. 2025, MNRAS 541, 2853, z = 0.44). Distance computed: comoving distance at z = 0.055 with the app's Planck 2018 cosmology (241.4 Mpc) */
+  { id:'holm15abh', name:'Holm 15A black hole', type:'Supermassive black hole', kind:'blackhole', aliases:['Holm 15A', 'Holm 15A*', 'Holmberg 15A', 'Abell 85 BCG'],
+    ra:0.69735, dec:-9.3031, d: 787000000, color:'#ffb45e', massSuns: 4.0e10, agn:false,
+    desc:'The central galaxy of the cluster Abell 85 holds a black hole of about 40 billion Suns, the heaviest yet weighed directly from the motions of stars in the nearby universe. The galaxy\'s core is unusually faint and spread out, about 13,000 light years in radius; the favoured explanation is that pairs of merging black holes flung the central stars away. A few black holes much farther off, weighed with the help of gravitational lensing, come out similar.',
+    stats:{ 'Mass':'≈ 40 billion Suns (± 8 billion)', 'Method':'Star motions (orbit models)', 'Distance':'≈ 790 million light years (computed from the redshift)', 'Redshift':'z = 0.055', 'Core radius':'≈ 13,000 light years' } },
+  /* NGC 1277: van den Bosch et al. 2012, Nature 491, 729: 1.7 × 10^10, 14% of the galaxy's stellar mass; Walsh et al. 2016, ApJ 817, 2: (4.9 ± 1.6) × 10^9 (1 sigma) at 71 Mpc, "an order of magnitude larger than expectations from the M–L relation"; Graham et al. 2016, ApJ 819, 43: 1.2 × 10^9, "probable upper limit"; relic: Trujillo et al. 2014, ApJL 780, L20; distance = the app's Perseus Cluster entry */
+  { id:'ngc1277bh', name:'NGC 1277 black hole', type:'Supermassive black hole', kind:'blackhole', aliases:['NGC 1277'], links:['perseuscluster', 'ngc1275'],
+    ra:3.33097, dec:41.5736, d: 240000000, color:'#ffb45e', massSuns: 4.9e9, agn:false,
+    desc:'A small, dense galaxy in the Perseus Cluster that has barely changed in about 10 billion years, a relic of the early universe. In 2012 its black hole was claimed to weigh 17 billion Suns, about 14 per cent of the mass of all its stars. Sharper observations in 2016 brought that down to about 5 billion, still about ten times more than expected for a galaxy this bright, while another study argued for at most 1.2 billion. How oversized it really is remains disputed.',
+    stats:{ 'Mass':'≈ 5 billion Suns (published 1.2–17 billion)', 'Method':'Star motions (adaptive optics)', 'Distance':'≈ 230–250 million light years', 'Redshift':'z = 0.0167' } },
+  /* M60-UCD1: Seth et al. 2014, Nature 513, 398: 2.1 (+1.4 −0.7, 1 sigma) × 10^7, 15% of the object's total mass, stellar mass 1.2 × 10^8, r_e = 24 pc, 6.6 kpc from M60, 16.5 Mpc; distance = the app's M60 entry */
+  { id:'m60ucd1', name:'M60-UCD1 black hole', type:'Supermassive black hole · ultracompact dwarf galaxy', kind:'blackhole', aliases:['M60-UCD1', 'M60 UCD1'], links:['m60'],
+    ra:12.72666, dec:11.5348, d: 55000000, color:'#ffb45e', massSuns: 2.1e7, agn:false,
+    desc:'M60-UCD1 is an ultracompact dwarf galaxy orbiting close to the giant elliptical M60: half its light comes from within about 80 light years of its centre. At its heart is a black hole of about 21 million Suns, some 15 per cent of the whole galaxy\'s mass, where in the Milky Way the share is a tiny fraction of a per cent. It is probably the stripped core of a once larger galaxy that M60 tore apart.',
+    stats:{ 'Mass':'≈ 21 million Suns (14–35 million)', 'Method':'Star motions (Gemini adaptive optics)', 'Share of its galaxy\'s mass':'≈ 15 %', 'Distance':'≈ 54–55 million light years' } },
+
+  /* ---- Supermassive black holes in nearby galaxies: active ones ---- */
+  /* NGC 4258 = M106: Reid, Pesce & Riess 2019, ApJL 886, L27: D = 7.576 ± 0.082 (stat) ± 0.076 (sys) Mpc, M = (3.98 ± 0.04) × 10^7 (Table 2); 7.576 Mpc = 24.7 million ly. The app's m106 entry (22 Mly) should move to 24,700,000 */
+  { id:'m106bh', name:'M106 black hole', type:'Low-luminosity active nucleus · water masers', kind:'blackhole', aliases:['NGC 4258 black hole', 'M 106 black hole', 'NGC 4258 maser'], links:['m106'],
+    ra:12.31597, dec:47.3040, d: 24700000, color:'#ffb45e', massSuns: 3.98e7, agn:true,
+    desc:'A black hole of 40 million Suns whose mass is known to about 1 per cent, one of the most precise anywhere. Clouds of water vapour in a thin disc around it act as natural masers, microwave lasers, and radio telescopes follow them as they orbit. Watching the same clouds drift and speed up also gives the galaxy\'s distance by pure geometry, which makes M106 an anchor for measuring the expansion of the universe. The nucleus is weakly active, with small radio jets.',
+    stats:{ 'Mass':'≈ 40 million Suns (± 1 %)', 'Method':'Water masers orbiting in a disc', 'Distance':'24.7 million light years (from the masers)', 'Host':'M106 (NGC 4258)' } },
+  /* Centaurus A: Cappellari et al. 2009, MNRAS 394, 660: (5.5 ± 3.0, 3 sigma) × 10^7 from stars (KH13 rescale: 5.69 (4.65–6.73) × 10^7 at 3.62 Mpc); gas-disc values since 2006 at 3.62 Mpc: 4.7, 6.3, 8.5 × 10^7 (KH13 notes); EHT: Janssen et al. 2021, Nature Astronomy 5, 1017 (19 July 2021), edge-brightened jet, sub-light-day scales; lobes: NASA Fermi release 1 April 2010, "each plume is nearly a million light-years long"; distance = the app's Cen A entry (best estimate 3.8 ± 0.1 Mpc = 12.4 Mly, Harris, Rejkuba & Harris 2010, PASA 27, 457) */
+  { id:'cenabh', name:'Centaurus A black hole', type:'Radio galaxy · active nucleus', kind:'blackhole', aliases:['Cen A black hole', 'NGC 5128 black hole', 'Centaurus A nucleus'], links:['cena'],
+    ra:13.42434, dec:-43.0191, d: 13000000, color:'#ffb45e', massSuns: 5.5e7, agn:true,
+    desc:'The black hole of about 55 million Suns at the centre of Centaurus A, the nearest large radio galaxy. Its jets feed two giant radio lobes, each nearly a million light years long. In 2021 the Event Horizon Telescope imaged the base of the jet on scales smaller than one light day, and found it bright along its edges, much like the jet of M87.',
+    stats:{ 'Mass':'≈ 55 million Suns (gas and star studies since 2006: 47–85 million)', 'Distance':'≈ 12–13 million light years', 'Jet imaged':'EHT, published July 2021', 'Host':'Centaurus A (NGC 5128)' } },
+  /* NGC 1068 = M77: maser disc-mass models (Lodato & Bertin 2003; Huré 2002) averaged by Kormendy & Ho 2013: (8.39 ± 0.44) × 10^6 at 15.9 Mpc. massSuns here is COMPUTED: rescaled (M ∝ D) to the Cepheid distance 10.72 ± 0.52 Mpc (Markham, Bentz et al. 2026, ApJ accepted, arXiv:2602.22407) = 35.0 Mly: 8.39 × 10.72/15.9 = 5.66 × 10^6. A Keplerian fit ignoring the disc's mass gives ≈ 1.9× more (1.60 vs 0.84 × 10^7 in Lodato & Bertin 2003 / KH13). TRGB: 11.14 ± 0.54 Mpc (Tikhonov & Galazutdinova 2021). Antonucci & Miller 1985, ApJ 297, 621; IceCube 2022, Science 378, 538: 79 (+22 −20) events, 4.2 sigma, 2011–2020 data. The app's m77 entry (47 Mly) should move to 35,000,000 */
+  { id:'m77bh', name:'M77 black hole', type:'Active galaxy · Seyfert 2', kind:'blackhole', aliases:['NGC 1068 black hole', 'M 77 black hole', 'NGC 1068 nucleus', 'M77 nucleus'], links:['m77'],
+    ra:2.71131, dec:-0.0133, d: 35000000, color:'#ffb45e', massSuns: 5.7e6, agn:true,
+    desc:'The active nucleus of M77 (NGC 1068) is the textbook Seyfert 2: thick dust hides the black hole from our direction. In 1985 light reflected off gas above it revealed the bright hidden core, a key step towards the idea that many kinds of active galaxy are the same thing seen from different angles. Water masers in a disc around it give a black hole of roughly 6 million Suns at the galaxy\'s newest distance. In 2022 the IceCube detector found evidence that it gives off high-energy neutrinos.',
+    stats:{ 'Mass':'≈ 6 million Suns (rescaled to the 2026 distance; ≈ 2× more if the disc\'s own mass is ignored)', 'Method':'Water masers', 'Distance':'≈ 35 million light years (Cepheids, 2026)', 'Neutrinos':'≈ 79 events, 4.2σ (IceCube 2022)' } },
+  /* M81*: Kormendy & Ho 2013: 6.5 (5–9) × 10^7 at 3.604 Mpc, the average of Bower et al. 2000 (HST STIS stars, 6 × 10^7, unrefereed abstract) and Devereux et al. 2003, AJ 125, 1226 (HST STIS gas, 7.0 (6.0–8.9) × 10^7); one-sided jet: Bietenholz, Bartel & Rupen 2000, ApJ 532, 895 ("A stationary core with a one-sided jet in the center of M81"); distance = the app's M81 entry (Cepheids, Freedman et al. 1994: 3.63 Mpc) */
+  { id:'m81star', name:'M81*', type:'Low-luminosity active nucleus', kind:'blackhole', aliases:['M81 black hole', 'M 81*', 'Bode\'s Galaxy black hole', 'NGC 3031 black hole'], links:['m81'],
+    ra:9.92588, dec:69.0653, d: 11800000, color:'#ffb45e', massSuns: 6.5e7, agn:true,
+    desc:'Bode\'s Galaxy has a black hole of about 65 million Suns, some 15 times the Milky Way\'s, that feeds slowly. It is one of the nearest active nuclei: feeble by quasar standards, but clear in radio and X-rays, with a small one-sided radio jet. Its mass comes from the motions of stars and of gas around it, both measured with Hubble, and the two methods agree.',
+    stats:{ 'Mass':'≈ 65 million Suns (≈ 50–90 million)', 'Method':'Gas and star motions (Hubble)', 'Distance':'11.8 million light years (Cepheids)', 'Host':'Bode\'s Galaxy (M81)' } },
+  /* M84: Walsh, Barth & Sarzi 2010, ApJ 721, 762: (8.5 +0.9 −0.8) × 10^8 (68%) at 17.0 Mpc, from the same archival STIS data as Bower et al. 1998, ApJL 492, L111: (1.5 +1.1 −0.6) × 10^9 at 17.0 Mpc. massSuns uses Kormendy & Ho 2013's rescaling to 18.51 Mpc, 9.25 (8.38–10.23) × 10^8, which matches the app's M84 distance (60 Mly = 18.4 Mpc). First BH discovery with HST STIS: KH13 notes */
+  { id:'m84bh', name:'M84 black hole', type:'Radio galaxy · active nucleus', kind:'blackhole', aliases:['NGC 4374 black hole', 'M 84 black hole', '3C 272.1'], links:['m84', 'virgocluster'],
+    ra:12.41771, dec:12.8870, d: 60000000, color:'#ffb45e', massSuns: 9.2e8, agn:true,
+    desc:'A giant elliptical in the Virgo Cluster whose black hole, about 900 million Suns, drives twin radio jets: the radio source 3C 272.1. It was the first black hole found with Hubble\'s STIS spectrograph, in 1998, from a disc of glowing gas spinning around it. A 2010 reanalysis of the same data, allowing for the gas\'s own random motions, brought the first estimate down by about 40 per cent.',
+    stats:{ 'Mass':'≈ 900 million Suns (first estimate ≈ 1.5 billion)', 'Method':'Gas disc motions (Hubble)', 'Distance':'≈ 60 million light years', 'Radio source':'3C 272.1' } },
+  /* NGC 4151: Bentz, Williams & Treu 2022, ApJ 934, 168: log M = 7.22 (+0.11 −0.10) = 1.66 (+0.48 −0.34) × 10^7 (dynamical modelling of reverberation data, distance-independent); other estimates 3.57–4.57 × 10^7 (reverberation with older calibrations, Bentz et al. 2006 and as quoted by Onken et al. 2014) and 3.76 ± 1.15 × 10^7 (stellar dynamics, Onken et al. 2014, ApJ 791, 37); distance: Yuan et al. 2020, ApJ 902, 26: 15.8 ± 0.4 Mpc (35 Cepheids) */
+  { id:'ngc4151', name:'NGC 4151', type:'Active galaxy · Seyfert 1', kind:'blackhole', aliases:['NGC 4151 black hole', 'NGC 4151 nucleus'],
+    ra:12.17572, dec:39.4058, d: 51500000, color:'#ffb45e', massSuns: 1.66e7, agn:true,
+    desc:'One of the nearest and brightest Seyfert galaxies, and one of the galaxies in Carl Seyfert\'s 1943 study that gave this kind of active galaxy its name. Its core changes in brightness over days to years as the black hole\'s feeding varies. Timing how long those changes take to echo in the surrounding gas, a method called reverberation mapping, gives a black hole of about 17 million Suns; the motions of stars around it suggest about twice that.',
+    stats:{ 'Mass':'≈ 17 million Suns (other estimates ≈ 36–46 million)', 'Method':'Reverberation mapping', 'Distance':'51.5 million light years (Cepheids)', 'Type':'Seyfert 1' } },
+  /* Circinus: Greenhill et al. 2003, ApJ 590, 162: (1.7 ± 0.3) × 10^6 at an assumed 4.2 Mpc (Freeman et al. 1977), disc 0.11–0.40 pc (0.36–1.3 ly); Kormendy & Ho 2013 rescale to (1.14 ± 0.20) × 10^6 at 2.82 Mpc (Karachentsev et al. 2004); 4.2 Mpc also the Tully–Fisher distance of Tully et al. 2009; 4.2 Mpc = 13.7 million ly. Discovery: Freeman et al. 1977, A&A 55, 445; b ≈ −3.8° */
+  { id:'circinusgal', name:'Circinus Galaxy', type:'Active galaxy · Seyfert 2', kind:'blackhole', aliases:['Circinus Galaxy black hole', 'ESO 97-G13'],
+    ra:14.21943, dec:-65.3391, d: 13700000, color:'#ffb45e', massSuns: 1.7e6, agn:true,
+    desc:'A spiral galaxy hidden behind the dust of the Milky Way, only about 4 degrees from its plane, so it went unnoticed until 1977. It holds one of the closest Seyfert nuclei, heavily hidden by its own dust. Water masers in a warped disc, about 0.4 to 1.3 light years from the centre, give a black hole of about 1.7 million Suns, smaller than the Milky Way\'s own.',
+    stats:{ 'Mass':'≈ 1.1–1.7 million Suns (depends on distance)', 'Method':'Water masers', 'Distance':'≈ 9–14 million light years (estimates differ)', 'Type':'Seyfert 2' } },
+  /* Cygnus A: Tadhunter et al. 2003, MNRAS 342, 861: (2.5 ± 0.7) × 10^9, z = 0.0560 (Kormendy & Ho 2013: 2.66 (1.91–3.40) × 10^9, "probably underestimated"); history: Hey, Parsons & Phillips 1946 (Nature 158, 234) found the compact fluctuating source and named it Cygnus A (Chandra Chronicle, chandra.harvard.edu/chronicle/0101/cyga1.html); optical identification by Baade & Minkowski, made 1951–52 and published 1954, ApJ 119, 206. Reber 1939 claim removed (no primary source checked). Distance computed: comoving distance at z = 0.056 with the app's Planck 2018 cosmology (245.8 Mpc) */
+  { id:'cyga', name:'Cygnus A', type:'Radio galaxy · active nucleus', kind:'blackhole', aliases:['Cyg A', '3C 405', 'Cygnus A black hole'],
+    ra:19.99121, dec:40.7339, d: 802000000, color:'#ffb45e', massSuns: 2.5e9, agn:true,
+    desc:'One of the brightest radio sources in the sky and the classic powerful radio galaxy: two jets from its black hole run far beyond the galaxy and end in bright hotspots and lobes. In 1946 radio astronomers found it to be a compact source, and in the early 1950s Walter Baade and Rudolph Minkowski matched it to a faint, distant galaxy, which showed that radio sources could be enormously powerful. Gas orbiting the centre gives a black hole of about 2.5 billion Suns.',
+    stats:{ 'Mass':'≈ 2.5 billion Suns (± 0.7 billion; may be low)', 'Method':'Gas motions (Keck, Hubble)', 'Distance':'≈ 800 million light years (computed from the redshift)', 'Redshift':'z = 0.056', 'Radio source':'3C 405' } },
+  /* NGC 1275 = Perseus A: Nagai et al. 2019, ApJ 883, 193: (1.1 +0.3 −0.5) × 10^9 (gas mass 4 × 10^8) or (1.2 +0.1 −0.6) × 10^9 (gas mass 5 × 10^7), ALMA CO disc, inclination 45–46° at the lower limit of the search range; warm-H2 values 3 × 10^8 (Wilman et al. 2005) and 8 × 10^8 (Scharwächter et al. 2013); broad-line (virial) values (2.9 ± 0.4) × 10^7 (Onori et al. 2017, broad Pa-beta) and ~1.4 × 10^7 (Koss et al. 2017, broad H-alpha), both as quoted by Sani et al. 2018, Front. Astron. Space Sci. 5, 2 (arXiv:1803.11013); sound waves: Fabian et al. 2003, MNRAS 344, L43 / Chandra release 9 Sept 2003; z = 0.01767 (NED); distance = the app's Perseus Cluster entry */
+  { id:'ngc1275', name:'NGC 1275', type:'Radio galaxy · active nucleus', kind:'blackhole', aliases:['Perseus A', '3C 84', 'Caldwell 24', 'NGC 1275 black hole'], links:['perseuscluster'],
+    ra:3.33004, dec:41.5117, d: 240000000, color:'#ffb45e', massSuns: 1.1e9, agn:true,
+    desc:'The giant galaxy at the heart of the Perseus Cluster. Outbursts from its black hole have blown bubbles in the cluster\'s hot gas and sent ripples through it; in 2003 Chandra showed them as sound waves with a pitch about 57 octaves below middle C. That heating is thought to stop the gas cooling into vast numbers of new stars. The black hole\'s mass is badly disputed: a spinning disc of gas suggests about a billion Suns, but fast gas very close to the black hole suggests only about 30 million.',
+    stats:{ 'Mass':'≈ 30 million to 1.2 billion Suns (methods disagree)', 'Method':'Molecular gas disc (ALMA) gives ≈ 1.1 billion', 'Distance':'≈ 240 million light years', 'Redshift':'z = 0.0177', 'Radio source':'3C 84 (Perseus A)' } },
+  /* NGC 6240: Komossa et al. 2003, ApJL 582, L15; Chandra release 19 Nov 2002 ("for the first time ... two supermassive black holes exist together in the same galaxy", "about 3000 light years apart"); Kollatschny et al. 2020, A&A 633, A79: three nuclei within 1 kpc, S1–S2 198 pc apart, M–sigma masses N 3.6 ± 0.8 × 10^8, S1 7.1 ± 0.8 × 10^8, S2 0.90 ± 0.07 × 10^8, "might be overestimated"; S2 has no radio counterpart, "suggesting that it is an inactive nucleus"; z = 0.02448 (paper mean; NED 0.0243); other estimates 1.4–2.0 × 10^8 (Engel et al. 2010); ALMA (Medling et al. 2019, ApJL 885, L21) finds much of the earlier dynamical mass of the southern nucleus may be gas; massSuns = S1. Distance computed: comoving distance at z = 0.0245 with the app's Planck 2018 cosmology (108.3 Mpc) */
+  { id:'ngc6240', name:'NGC 6240', type:'Merging galaxies · two active nuclei', kind:'blackhole', aliases:['IC 4625', 'NGC 6240 black holes'],
+    ra:16.88302, dec:2.4009, d: 353000000, color:'#ffb45e', massSuns: 7.1e8, agn:true,
+    desc:'Two galaxies in the last stages of colliding, with their black holes less than 3,000 light years apart. In 2002 Chandra showed that both are feeding, the first time two active supermassive black holes had been found in one galaxy. A 2020 study with the Very Large Telescope reported that the southern nucleus is itself two, one of them quiet, which would make three black holes in all; that has not yet been confirmed by others. They are expected to merge eventually.',
+    stats:{ 'Mass':'≈ 1–7 × 10⁸ Suns each (from star speeds via a scaling rule; may be too high)', 'Separation':'< 3,000 light years', 'Distance':'≈ 350 million light years (computed from the redshift)', 'Redshift':'z = 0.024' } }
 ];
 
 /* ---------------- The Solar System as one thing, for sizes and the cosmic address ----------------
@@ -629,7 +744,7 @@ const EXOPLANETS = [
         globular | open                                        */
 const DEEP_SKY = [
   /* --- Galaxies --- */
-  { id:'m31', name:'Andromeda Galaxy', aliases:['M31', 'NGC 224', 'Andromeda'], sub:'spiral', cat:'galaxies', ra:0.7123, dec:41.269, d:2537000, size:152000, color:'#cfd8f2', tilt:0.6, flat:0.34,
+  { id:'m31', name:'Andromeda Galaxy', aliases:['M31', 'NGC 224', 'Andromeda'], sub:'spiral', cat:'galaxies', ra:0.71232, dec:41.2691, d:2537000, size:152000, color:'#cfd8f2', tilt:0.6, flat:0.34,
     desc:'The nearest large galaxy and the most distant thing most people can see with the naked eye. It holds about a trillion stars and is heading toward us at 110 km/s. It makes its first close pass in about 5 billion years; the two galaxies will probably, but not certainly, merge a few billion years after that.',
     stats:{ 'Type':'Barred spiral (SA(s)b)', 'Distance':'2.54 million ly', 'Diameter':'≈152,000 ly', 'Stars':'≈1 trillion', 'Apparent size':'3° — six full Moons' } },
   { id:'m33', name:'Triangulum Galaxy', sub:'spiral', cat:'galaxies', ra:1.5641, dec:30.660, d:2730000, size:60000, color:'#c8d4ee', tilt:-0.4, flat:0.6,
@@ -647,13 +762,13 @@ const DEEP_SKY = [
   { id:'m51', name:'Whirlpool Galaxy', sub:'spiral', cat:'galaxies', ra:13.4979, dec:47.195, d:23000000, size:76000, color:'#cdd8f0', tilt:0.1, flat:0.85,
     desc:'The first galaxy recognised as a spiral, in 1845. Its arms are being stirred by a smaller galaxy passing behind it.',
     stats:{ 'Type':'Grand-design spiral', 'Distance':'23 million ly', 'Diameter':'≈76,000 ly' } },
-  { id:'m104', name:'Sombrero Galaxy', sub:'galaxy', cat:'galaxies', ra:12.6665, dec:-11.623, d:29500000, size:49000, color:'#e0dccb', tilt:0.05, flat:0.28,
+  { id:'m104', name:'Sombrero Galaxy', aliases:['NGC 4594'], sub:'galaxy', cat:'galaxies', ra:12.66651, dec:-11.6231, d:29500000, size:49000, color:'#e0dccb', tilt:0.05, flat:0.28,
     desc:'Seen almost exactly edge-on, with a brilliant bulge cut by a sharp dust lane — hence the hat.',
     stats:{ 'Type':'Lenticular / spiral', 'Distance':'29.5 million ly', 'Diameter':'≈49,000 ly' } },
   { id:'m87', name:'M87', links:['m87star'], aliases:['Virgo A', 'NGC 4486', 'Messier 87'], sub:'galaxy', cat:'galaxies', ra:12.5137, dec:12.391, d:53500000, size:132000, color:'#ece6d8', tilt:0, flat:0.9,
     desc:'A giant elliptical galaxy whose central black hole — 6.5 billion solar masses — was the first ever photographed, in 2019.',
     stats:{ 'Type':'Giant elliptical', 'Distance':'53.5 million ly', 'Central black hole':'6.5 billion Suns', 'First imaged':'10 April 2019' } },
-  { id:'cena', name:'Centaurus A', sub:'galaxy', cat:'galaxies', ra:13.4245, dec:-43.019, d:13000000, size:60000, color:'#ded6c6', tilt:0.9, flat:0.8,
+  { id:'cena', name:'Centaurus A', aliases:['NGC 5128'], sub:'galaxy', cat:'galaxies', ra:13.42434, dec:-43.0191, d:13000000, size:60000, color:'#ded6c6', tilt:0.9, flat:0.8,
     desc:'The nearest active galaxy, split by a thick dust lane left over from a collision, and firing jets of plasma a million light years long.',
     stats:{ 'Type':'Lenticular, active', 'Distance':'13 million ly', 'Radio jets':'≈1 million ly' } },
 
@@ -713,9 +828,9 @@ const DEEP_SKY = [
     sub:'globular', cat:'clusters', ra:16.6948, dec:36.4599, d:24200, arcmin:20, mag:5.8, con:'Hercules', color:'#ffe9c8',
     desc:'The Great Globular Cluster in Hercules: one of the brightest globulars in northern skies, found by Edmond Halley in 1714 and just visible to the naked eye on a dark night. In 1974 the Arecibo radio telescope beamed a deliberate message toward it, the Arecibo message, which will take about 25,000 years to arrive.',
     stats:{ 'Mass':'≈ 480,000 Suns', 'Age':'≈ 12 billion years', 'Discovered':'Edmond Halley, 1714' } },
-  { id:'omegacen', name:'Omega Centauri', sub:'globular', cat:'clusters', ra:13.4463, dec:-47.479, d:15800, size:150, color:'#ffeed2',
+  { id:'omegacen', name:'Omega Centauri', aliases:['NGC 5139'], sub:'globular', cat:'clusters', ra:13.4463, dec:-47.479, d:17700, size:150, color:'#ffeed2',
     desc:'The largest globular cluster orbiting the Milky Way — ten million stars, and quite possibly the stripped core of a swallowed dwarf galaxy.',
-    stats:{ 'Type':'Globular cluster', 'Distance':'15,800 ly', 'Diameter':'≈150 ly', 'Stars':'≈10 million' } },
+    stats:{ 'Type':'Globular cluster', 'Distance':'17,700 ly', 'Diameter':'≈150 ly', 'Stars':'≈10 million' } },
   { id:'47tuc', name:'47 Tucanae', sub:'globular', cat:'clusters', ra:0.4010, dec:-72.081, d:13000, size:120, color:'#ffe8c0',
     desc:'The second-brightest globular cluster, with a core so crowded that stars collide and merge there.',
     stats:{ 'Type':'Globular cluster', 'Distance':'13,000 ly', 'Diameter':'≈120 ly' } },
@@ -826,7 +941,7 @@ const DEEP_SKY = [
     stats:{ 'Member stars (Gaia)':'≈ 70', 'Age':'≈ 5–20 million years', 'Discovered':'Charles Messier, 1764' } },
   { id:'m30', name:'M 30', sub:'globular', cat:'clusters', ra:21.673, dec:-23.18, d:27100, arcmin:12, mag:7.7, con:'Capricornus', color:'#ffe8c6',
     desc:'A core-collapsed globular racing through the galaxy on a retrograde orbit.' },
-  { id:'m32', name:'M 32', sub:'galaxy', cat:'galaxies', ra:0.712, dec:40.87, d:2490000, arcmin:8, mag:8.1, con:'Andromeda', color:'#e6e0d2', tilt:-0.02, flat:0.31,
+  { id:'m32', name:'M 32', aliases:['NGC 221'], sub:'galaxy', cat:'galaxies', ra:0.71163, dec:40.8654, d:2490000, arcmin:8, mag:8.1, con:'Andromeda', color:'#e6e0d2', tilt:-0.02, flat:0.31,
     desc:'A compact dwarf elliptical orbiting Andromeda, its outer stars long since stripped away.' },
   { id:'m34', name:'Spiral Cluster', also:'M 34 · NGC 1039', aliases:['M34','NGC 1039'], sub:'open', cat:'clusters', ra:2.7032, dec:42.7220, d:1600, arcmin:35, mag:5.5, con:'Perseus', color:'#dbe6ff',
     desc:'A loose, nearby open cluster in Perseus whose brighter stars seem to curl outward in arms, which earned it the nickname Spiral Cluster. It is faintly visible to the naked eye from a dark site, breaks into dozens of stars in binoculars, and is a benchmark for dating stars by their spin: a five-month survey of its members gave an age of about 240 million years.',
@@ -874,7 +989,7 @@ const DEEP_SKY = [
     desc:'One of only four barred spirals in Messier\'s list.' },
   { id:'m59', name:'M 59', sub:'galaxy', cat:'galaxies', ra:12.7, dec:11.65, d:60000000, arcmin:5, mag:9.6, con:'Virgo', color:'#e6e0d2', tilt:0.98, flat:0.64,
     desc:'An elliptical in the Virgo Cluster whose core rotates opposite to the rest of it.' },
-  { id:'m60', name:'M 60', sub:'galaxy', cat:'galaxies', ra:12.728, dec:11.55, d:55000000, arcmin:7, mag:8.8, con:'Virgo', color:'#e6e0d2', tilt:-1.52, flat:0.57,
+  { id:'m60', name:'M 60', aliases:['NGC 4649'], sub:'galaxy', cat:'galaxies', ra:12.728, dec:11.55, d:55000000, arcmin:7, mag:8.8, con:'Virgo', color:'#e6e0d2', tilt:-1.52, flat:0.57,
     desc:'A giant elliptical locked in a gravitational embrace with the spiral NGC 4647.' },
   { id:'m61', name:'M 61', sub:'spiral', cat:'galaxies', ra:12.365, dec:4.47, d:52500000, arcmin:6, mag:9.7, con:'Virgo', color:'#cdd8f0', tilt:-0.87, flat:0.5,
     desc:'A face-on barred spiral and an unusually productive supernova factory.' },
@@ -910,7 +1025,7 @@ const DEEP_SKY = [
     desc:'One of the most concentrated globulars, and among the most distant.' },
   { id:'m76', name:'Little Dumbbell', sub:'planetary', cat:'nebulae', ra:1.707, dec:51.58, d:2500, arcmin:3, mag:10.1, con:'Perseus', color:'#7fd0c0', color2:"#e0908f",
     desc:'A small, faint planetary nebula shaped like its larger namesake.' },
-  { id:'m77', name:'M 77', sub:'spiral', cat:'galaxies', ra:2.712, dec:-0.01, d:47000000, arcmin:7, mag:8.9, con:'Cetus', color:'#cdd8f0', tilt:0.04, flat:0.58,
+  { id:'m77', name:'M 77', aliases:['NGC 1068'], sub:'spiral', cat:'galaxies', ra:2.71131, dec:-0.0133, d:35000000, arcmin:7, mag:8.9, con:'Cetus', color:'#cdd8f0', tilt:0.04, flat:0.58,
     desc:'The archetypal Seyfert galaxy — a blazingly active core powered by a feeding black hole.' },
   { id:'m78', name:'M 78', sub:'nebula', cat:'nebulae', ra:5.778, dec:0.05, d:1600, arcmin:8, mag:8.3, con:'Orion', color:'#dc8296', color2:"#8fb0e0",
     desc:'The brightest reflection nebula in the sky, glowing with light scattered off dust.' },
@@ -918,13 +1033,13 @@ const DEEP_SKY = [
     desc:'Oddly placed opposite the galactic centre — likely stolen from a passing dwarf galaxy.' },
   { id:'m80', name:'M 80', sub:'globular', cat:'clusters', ra:16.284, dec:-22.98, d:32600, arcmin:10, mag:7.9, con:'Scorpius', color:'#ffe8c6',
     desc:'A dense globular that produced a rare nova outburst in 1860.' },
-  { id:'m81', name:'Bode\'s Galaxy', sub:'spiral', cat:'galaxies', ra:9.927, dec:69.07, d:11800000, arcmin:27, mag:6.9, con:'Ursa Major', color:'#cdd8f0', tilt:-0.52, flat:0.3,
+  { id:'m81', name:'Bode\'s Galaxy', aliases:['NGC 3031'], sub:'spiral', cat:'galaxies', ra:9.92588, dec:69.0653, d:11800000, arcmin:27, mag:6.9, con:'Ursa Major', color:'#cdd8f0', tilt:-0.52, flat:0.3,
     desc:'A grand-design spiral with a supermassive black hole 70 million times the Sun\'s mass.' },
   { id:'m82', name:'Cigar Galaxy', sub:'galaxy', cat:'galaxies', ra:9.932, dec:69.68, d:11500000, arcmin:11, mag:8.4, con:'Ursa Major', color:'#e6e0d2', tilt:0.12, flat:0.83,
     desc:'A starburst galaxy, forming stars ten times faster than ours and blasting plumes of hot gas out both poles.' },
   { id:'m83', name:'Southern Pinwheel', sub:'spiral', cat:'galaxies', ra:13.617, dec:-29.87, d:15000000, arcmin:13, mag:7.5, con:'Hydra', color:'#cdd8f0', tilt:0.77, flat:0.76,
     desc:'A bright barred spiral seen face-on, and a prolific producer of supernovae.' },
-  { id:'m84', name:'M 84', sub:'galaxy', cat:'galaxies', ra:12.418, dec:12.89, d:60000000, arcmin:6, mag:9.1, con:'Virgo', color:'#e6e0d2', tilt:1.41, flat:0.69,
+  { id:'m84', name:'M 84', aliases:['NGC 4374'], sub:'galaxy', cat:'galaxies', ra:12.41771, dec:12.8870, d:60000000, arcmin:6, mag:9.1, con:'Virgo', color:'#e6e0d2', tilt:1.41, flat:0.69,
     desc:'A lenticular galaxy at the heart of Markarian\'s Chain.' },
   { id:'m85', name:'M 85', sub:'galaxy', cat:'galaxies', ra:12.423, dec:18.19, d:60000000, arcmin:7, mag:9.1, con:'Coma Berenices', color:'#e6e0d2', tilt:-1.08, flat:0.62,
     desc:'The northernmost member of the Virgo Cluster, showing signs of a past merger.' },
@@ -966,7 +1081,7 @@ const DEEP_SKY = [
     stats:{ 'Member stars (Gaia)':'≈ 210', 'Age':'≈ 15–30 million years', 'Discovered':'Pierre Méchain, 1781' } },
   { id:'m105', name:'M 105', sub:'galaxy', cat:'galaxies', ra:10.797, dec:12.58, d:32000000, arcmin:5, mag:9.3, con:'Leo', color:'#e6e0d2', tilt:1.12, flat:0.56,
     desc:'An elliptical harbouring a black hole of some 200 million solar masses.' },
-  { id:'m106', name:'M 106', sub:'spiral', cat:'galaxies', ra:12.317, dec:47.3, d:22000000, arcmin:19, mag:8.4, con:'Canes Venatici', color:'#cdd8f0', tilt:-1.38, flat:0.49,
+  { id:'m106', name:'M 106', aliases:['NGC 4258'], sub:'spiral', cat:'galaxies', ra:12.31597, dec:47.3040, d:24700000, arcmin:19, mag:8.4, con:'Canes Venatici', color:'#cdd8f0', tilt:-1.38, flat:0.49,
     desc:'Its core drives strange extra arms of glowing gas, heated by a black hole devouring matter.' },
   { id:'m107', name:'M 107', sub:'globular', cat:'clusters', ra:16.542, dec:-13.05, d:20900, arcmin:13, mag:8.9, con:'Ophiuchus', color:'#ffe8c6',
     desc:'A loose globular threaded with dark obscuring regions.' },
@@ -1124,7 +1239,68 @@ const REMNANTS = [
     mass:12.4, color:'#ffb45e',
     desc:'Fires jets of plasma that appear to move faster than light — an illusion of geometry, but the first such superluminal source found inside our own galaxy. It has been in outburst almost continuously since 1992.',
     stats:{ 'Type':'Microquasar', 'Mass':'≈12.4 Suns', 'Distance':'≈36,000 light years',
-            'Jets':'Apparently superluminal', 'In outburst since':'1992' } }
+            'Jets':'Apparently superluminal', 'In outburst since':'1992' } },
+  /* more stellar-mass black holes (2026-10-29): masses and distances from the papers in the research notes */
+/* Gaia BH2: El-Badry et al. 2023, MNRAS 521, 4323 (arXiv:2302.07880): 8.9 ± 0.3 Suns (abstract; 8.94 ± 0.34 in the paper's table), 1.16 kpc (→ 3,780 ly, computed), P = 1277 d, e = 0.52, ~1-Sun low-luminosity red giant; X-ray and radio non-detections near periastron. Position: SIMBAD (Gaia DR3 5870569352746779008), checked. */
+  { id:'gaiabh2', name:'Gaia BH2', sub:'stellarbh', ra:13.83799, dec:-59.2390, d:3780,
+    mass:8.94, color:'#ffb45e', aliases:['Gaia DR3 5870569352746779008'],
+    desc:'The second black hole found by Gaia, announced in 2023, from the wobble of the star going round it. That star is a red giant on a wide, stretched orbit that takes about three and a half years. Very little gas reaches the black hole: searches for X-rays and radio waves from it found nothing.',
+    stats:{ 'Type':'Stellar-mass black hole', 'Mass':'≈8.9 Suns', 'Distance':'≈3,800 light years',
+            'Companion':'Red giant, 3.5-year orbit', 'Found':'2023, by stellar motion' } },
+  /* Gaia BH3: Gaia Collaboration, Panuzzo et al. 2024, A&A 686, L2 (arXiv:2404.10486): 32.70 ± 0.82 Suns, 590 pc (→ 1,924 ly, computed), P = 11.6 yr, old very metal-poor halo giant, found in pre-release (DR4 validation) astrometry; "more massive than any other Galactic stellar-origin BH known thus far". Position: SIMBAD (Gaia DR3 4318465066420528000 = LS II +14 13), checked. */
+  { id:'gaiabh3', name:'Gaia BH3', sub:'stellarbh', ra:19.65520, dec:14.9317, d:1920,
+    mass:32.7, color:'#ffb45e', aliases:['Gaia DR3 4318465066420528000','LS II +14 13'],
+    desc:'The heaviest stellar-mass black hole known in the Milky Way, about 33 Suns, spotted in 2024 in early Gaia data before the full release. Its companion is an old giant star, poor in heavy elements, from the galaxy\'s halo. Black holes this heavy had been seen in gravitational waves from distant galaxies, but never in ours.',
+    stats:{ 'Type':'Stellar-mass black hole', 'Mass':'≈32.7 Suns', 'Distance':'≈1,900 light years',
+            'Companion':'Old metal-poor giant, 11.6-year orbit', 'Found':'2024, by stellar motion' } },
+  /* MAXI J1820+070: mass 8.48 +0.79/−0.72 Suns (Torres et al. 2020, ApJL 893, L37, arXiv:2003.02360) ASSUMES the orbit is tilted like the radio jet (63°); with the orbital inclination limits alone the same paper gives 5.73–8.34 (95%). Atri et al. 2020 (MNRAS 493, 81): 9.2 ± 1.3. Poutanen et al. 2022 (Science, arXiv:2109.07511) find the jet misaligned with the orbit by > 40°, so the jet-based value is not secure. Distance: radio parallax 2.96 ± 0.33 kpc (Atri et al. 2020) → 9,650 ly (computed). Orbit 0.68549 d = 16.45 h and K3–5 donor: Torres et al. 2019, ApJL 882, L21 (arXiv:1907.00938). Position: SIMBAD, checked. */
+  { id:'maxij1820', name:'MAXI J1820+070', sub:'stellarbh', ra:18.33943, dec:7.1854, d:9650,
+    mass:8.48, color:'#ffb45e', aliases:['ASASSN-18ey'],
+    desc:'An X-ray nova that erupted in March 2018 and became one of the brightest X-ray sources in the sky. Radio telescopes measured its parallax directly, giving one of the most reliable distances to any black hole in our galaxy. Its mass is less certain, because its jet turns out not to line up with the orbit.',
+    stats:{ 'Type':'X-ray binary black hole', 'Mass':'≈8.5 Suns (estimates 5.7–9.3)', 'Distance':'≈9,700 light years (radio parallax)',
+            'Companion':'Small K-type star, 16.5-hour orbit', 'Outburst':'2018' } },
+  /* GRO J1655-40: mass 5.4 ± 0.3 (Beer & Podsiadlowski 2002, MNRAS 331, 351) vs 6.3 ± 0.5 (Greene, Bailyn & Orosz 2001, ApJ 554, 1290). Distance 3.2 kpc (Hjellming & Rupen 1995, Nature 375, 464) → 10,400 ly (computed); Foellmi et al. 2006 (A&A 457, 249, arXiv:astro-ph/0606269): < 1.7 kpc, "at D ≤ 1.7 kpc the jets are not superluminal". Supernova-enriched companion (O, Mg, Si, S): Israelian et al. 1999, Nature 401, 142. Position: SIMBAD (V1033 Sco), checked. */
+  { id:'groj1655', name:'GRO J1655−40', sub:'stellarbh', ra:16.90004, dec:-39.8458, d:10400,
+    mass:5.4, color:'#ffb45e', aliases:['GRO J1655-40','V1033 Sco','Nova Scorpii 1994'],
+    desc:'Found in 1994 when it fired radio jets that, at its usual distance, seemed to move faster than light, an illusion of geometry. The atmosphere of its companion star is enriched in elements made in a supernova, likely the one that formed the black hole. Its distance is disputed: one study puts it at less than half the usual value, which would also make the jets slower than they looked.',
+    stats:{ 'Type':'Microquasar', 'Mass':'≈5.4–6.3 Suns (estimates differ)', 'Distance':'≈10,400 light years (disputed; maybe < 5,500)',
+            'Found':'1994', 'Jets':'Apparently faster than light' } },
+  /* XTE J1118+480: 8.53 ± 0.60 Suns at i = 68 ± 2° and distance 1.72 ± 0.10 kpc (Gelino et al. 2006, ApJ 642, 438, arXiv:astro-ph/0601409) → 5,610 ly (computed). Khargharia et al. 2013 (ApJ 765, 134, arXiv:1211.2786) allow for extra light from the disc and get 6.9–8.2 Suns (no central value given). Orbit 0.16995 d = 4.08 h (Khargharia Table, citing González Hernández et al. 2008). Halo-like Galactic orbit: Mirabel et al. 2001, Nature 413, 139. Outbursts 2000 and January 2005 (arXiv:astro-ph/0607314). Position: SIMBAD (KV UMa), checked. */
+  { id:'xtej1118', name:'XTE J1118+480', sub:'stellarbh', ra:11.30300, dec:48.0368, d:5600,
+    mass:8.53, color:'#ffb45e', aliases:['KV UMa','KV Ursae Majoris'],
+    desc:'A black hole well above the disc of the Milky Way, seen through a window almost free of gas and dust, so its 2000 outburst could be studied over an unusually wide range of light. It travels through the galaxy on an eccentric orbit more like a halo object\'s than a disc star\'s. Its small companion star goes round it in about four hours.',
+    stats:{ 'Type':'X-ray binary black hole', 'Mass':'≈8.5 Suns (a 2013 study: 6.9–8.2)', 'Distance':'≈5,600 light years',
+            'Orbit':'4.1 hours', 'Outbursts':'2000, 2005' } },
+  /* V4641 Sgr: MacDonald et al. 2014, ApJ 784, 2 (arXiv:1401.4190): 6.4 ± 0.6 Suns, B9III companion, 6.2 ± 0.7 kpc (→ 20,200 ly, computed); P = 2.8 d. Gamma rays: HAWC (Alfaro et al. 2024, Nature 634, 557, arXiv:2410.16117) "detected up to 200 TeV"; LHAASO (arXiv:2410.08988, Natl Sci Rev 12, nwaf496, 2025) elongated source "with the spectrum continuing up to 800 TeV". H.E.S.S. 2025 (arXiv:2511.10537) calls it "the most extreme Galactic particle accelerator". Position: SIMBAD, checked. */
+  { id:'v4641sgr', name:'V4641 Sagittarii', sub:'stellarbh', ra:18.32268, dec:-25.4072, d:20200,
+    mass:6.4, color:'#ffb45e', aliases:['V4641 Sgr','SAX J1819.3-2525'],
+    desc:'In 1999 this system flared for a few hours into one of the brightest X-ray sources in the sky. In 2024 the HAWC and LHAASO observatories found gamma rays coming from a long region around it, with energies up to about 200 TeV (HAWC) and 800 TeV (LHAASO), so particles near it are being pushed to some of the highest energies seen from anything in the Milky Way.',
+    stats:{ 'Type':'Microquasar', 'Mass':'≈6.4 Suns', 'Distance':'≈20,000 light years',
+            'Companion':'Hot B-type star, 2.8-day orbit', 'Gamma rays':'Up to ≈800 TeV (LHAASO, 2024)' } },
+  /* 4U 1543-47: 9.4 Suns (8.4–10.4), 7.5 kpc → 24,500 ly (computed): Orosz 2003, IAU Symposium 212 (conference proceeding; no newer refereed dynamical mass found). Outbursts 1971/1983/1992/2002/2021. 2021 outburst: peak ≈8.2 Crab (2–10 keV) and super-Eddington (A&A 685, A42, 2024, arXiv:2312.09632; also arXiv:2403.02874, which uses the same mass and distance). Position: SIMBAD (IL Lup), checked. */
+  { id:'4u1543', name:'4U 1543−47', sub:'stellarbh', ra:15.78563, dec:-47.6695, d:24500,
+    mass:9.4, color:'#ffb45e', aliases:['4U 1543-47','IL Lupi','IL Lup'],
+    desc:'A black hole in Lupus that has erupted every ten to twenty years since it was found in 1971. In its 2021 outburst it reached about eight times the X-ray brightness of the Crab Nebula, and seems to have gone past the Eddington limit, the point where the push of its own radiation balances gravity. Its mass comes from an older conference report.',
+    stats:{ 'Type':'X-ray binary black hole', 'Mass':'≈9.4 Suns (8.4–10.4)', 'Distance':'≈24,500 light years',
+            'Outbursts':'1971, 1983, 1992, 2002, 2021' } },
+  /* LMC X-1: Orosz et al. 2009, ApJ 697, 573 (arXiv:0810.3447): 10.91 ± 1.41 Suns, companion 31.79 ± 3.48 Suns, P = 3.909 d. Distance set to the app's LMC value (163,000 ly) so it sits in the LMC. Position: SIMBAD, checked. */
+  { id:'lmcx1', name:'LMC X-1', sub:'stellarbh', ra:5.66079, dec:-69.7432, d:163000,
+    mass:10.91, color:'#ffb45e', aliases:['LMC X-1'],
+    desc:'A black hole in our neighbour galaxy, the Large Magellanic Cloud, orbiting a giant star of about 32 Suns every 3.9 days. Unlike most black hole binaries in the Milky Way, which flare and then go quiet, it has shone steadily in X-rays since it was discovered.',
+    stats:{ 'Type':'X-ray binary black hole', 'Mass':'≈10.9 Suns', 'Distance':'≈163,000 light years (in the LMC)',
+            'Companion':'Giant O star, ≈32 Suns', 'Orbit':'3.9 days' } },
+  /* LMC X-3: Orosz et al. 2014, ApJ 794, 154 (arXiv:1402.0085): 6.98 ± 0.56 Suns, companion 3.63 ± 0.57 Suns, P = 1.70 d. Uhuru discovery 1971. Distance = app LMC value. Position: SIMBAD, checked. */
+  { id:'lmcx3', name:'LMC X-3', sub:'stellarbh', ra:5.64906, dec:-64.0843, d:163000,
+    mass:6.98, color:'#ffb45e', aliases:['LMC X-3'],
+    desc:'A black hole of about 7 Suns in the Large Magellanic Cloud, circling a hot B-type star every 1.7 days. It has been bright in X-rays almost continuously since it was found in 1971, although its brightness rises and falls over months.',
+    stats:{ 'Type':'X-ray binary black hole', 'Mass':'≈7.0 Suns', 'Distance':'≈163,000 light years (in the LMC)',
+            'Companion':'B star, ≈3.6 Suns', 'Orbit':'1.7 days' } },
+  /* M33 X-7: Ramachandran et al. 2022, A&A 667, A77 (arXiv:2208.07773), table: M_BH 11.4 +3.3/−1.7, donor 38 +22/−10 Suns, P = 3.45301 d, "the only known eclipsing black hole high mass X-ray binary"; old value 15.65 ± 1.45 (Orosz et al. 2007, Nature 449, 872). Distance = app M33 value (2.73 million ly ≈ 840 kpc, as used by both papers). Position: SIMBAD, checked. */
+  { id:'m33x7', name:'M33 X-7', sub:'stellarbh', ra:1.55948, dec:30.5365, d:2730000,
+    mass:11.4, color:'#ffb45e', aliases:['M33 X-7'],
+    desc:'The only known black hole with a massive companion star that eclipses it: every 3.45 days the huge O star passes in front of the black hole and blocks its X-rays. Announced in 2007 at nearly 16 Suns, its mass was revised in 2022 to about 11 Suns after a better model of the companion star.',
+    stats:{ 'Type':'Eclipsing X-ray binary', 'Mass':'≈11.4 Suns (9.7–14.7; was 15.7)', 'Distance':'≈2.7 million light years (in M33)',
+            'Companion':'O star, ≈38 Suns', 'Orbit':'3.45 days' } }
 ];
 
 /* ---------------- Deep fields ----------------
@@ -1679,6 +1855,26 @@ const DEEP_UNIVERSE = [
   { id:'gw170817', sizeNote:'GW170817 was an event, not an object, so it has no size. The two neutron stars that collided were each about 24 km across, measured from the gravitational waves.', name:'GW170817', sub:'gw', ra:13.1634, dec:-23.3815, dMly:130, aliases:['NGC 4993','kilonova'],
     desc:'Two neutron stars merging in the galaxy NGC 4993, caught on 17 August 2017 in gravitational waves and then light: a gamma-ray burst 1.7 seconds later, then a glowing kilonova that forged gold and platinum. The first event seen by both kinds of astronomy.',
     stats:{ 'Date':'17 August 2017', 'Host galaxy':'NGC 4993', 'Made':'Gold, platinum and other heavy elements' } },
+/* GW150914: current GWOSC catalogue values are the GWTC-2.1 reanalysis (GWOSC GWTC-2.1-confident GW150914-v4, data release doi:10.7935/qf3a-3z67): m1 34.6 +4.4/−2.6, m2 30.0 +2.9/−4.6, Mf 61.5 +3.4/−2.9, dL 470 +140/−160 Mpc, z 0.10 ± 0.03. (GWTC-1, PRX 9, 031040: 35.6 + 30.6 → 63.1, z 0.09, 182 deg²; discovery PRL 116, 061102: 36 + 29 → 62, 3.0 Suns radiated.) Radiated ≈ 64.5 − 61.5 = 3.0 Suns (computed). 90% sky area 251.8 deg² (GWTC-2.1 skymap_stats, Zenodo 6513631). RA/Dec = highest-probability pixel of the GWTC-2.1 Mixed sky map (computed here; 90% region RA 3.3–10.3 h, Dec −75° to −52°). */
+  { id:'gw150914', name:'GW150914', sub:'gw', ra:8.83, dec:-69.24, z:0.10, aliases:['first gravitational waves','first black hole merger'], massSuns:61.5,
+    desc:'The first gravitational waves ever detected, picked up by both LIGO detectors on 14 September 2015: two black holes of about 35 and 30 Suns spiralling together and merging into one of about 61. In a fraction of a second about three Suns\' worth of mass was turned into gravitational-wave energy. With only two detectors, its position is known only to a patch of sky of about 250 square degrees, far in the southern sky towards the Magellanic Clouds; the point shown is just the most likely spot in that patch.',
+    stats:{ 'Date':'14 September 2015', 'Merged':'≈35 + 30 Suns', 'Final black hole':'≈61.5 Suns (58.6–64.9)',
+            'Redshift range':'0.07–0.13', 'Sky position':'Only to a patch ≈250 sq. degrees' } },
+  /* GW190521 (03:02:29 UTC; not GW190521_074359): GWTC-2.1 (Abbott et al. 2024, PRD 109, 022001, Table; GWOSC GWTC-2.1-confident v4): m1 98.4 +33.6/−21.7, m2 57.2 +27.1/−30.1, Mf 147.4 +40.0/−16.0, dL 3.31 +2.79/−1.80 Gpc, z 0.56 +0.36/−0.27, ΔΩ 1000 deg². Discovery (PRL 125, 101102): 85 + 66 → 142, z 0.82. RA/Dec = highest-probability pixel of the GWTC-2.1 IMRPhenomXPHM sky map (computed here; 1,020 deg² at 90%, matching the release stats). The ZTF flare AGN (Graham et al. 2020) is NOT used, to avoid implying a host. */
+  { id:'gw190521', name:'GW190521', sub:'gw', ra:12.53, dec:28.38, z:0.56, aliases:['S190521g','GW190521_030229'], massSuns:147.4,
+    desc:'A merger of two unusually heavy black holes, caught on 21 May 2019, that left a single black hole of roughly 150 Suns: the first clear birth of an intermediate-mass black hole. At least one of the pair is heavier than collapsing stars are thought able to make directly, so it may itself be the product of an earlier merger. Its position is known only to a patch of sky of about 1,000 square degrees; the point shown is just the most likely spot in it.',
+    stats:{ 'Date':'21 May 2019', 'Merged':'≈98 + 57 Suns (first reported as 85 + 66)', 'Final black hole':'≈147 Suns (131–187)',
+            'Redshift range':'0.29–0.92', 'Sky position':'Only to a patch ≈1,000 sq. degrees' } },
+  /* GW231123: discovery LVK 2025, ApJL 993, L25 (arXiv:2507.08219): m1 137 +23/−18, m2 101 +22/−50, χ1 0.90 +0.10/−0.19, χ2 0.80 +0.20/−0.52, z 0.40 +0.27/−0.25, SNR ~20.7, ~5 cycles, "short duration (~0.1 s)", LIGO only; GWOSC GWTC-4.1 (current) keeps Mf 222 +28/−42, z 0.40. GWTC-4.0 (ApJL 1004, L22, 2026; arXiv:2508.18082) Table 3: total 236 +29/−48, Mf 222 +27/−42, ΔΩ 1700 deg²; "the most massive source observed in O4a"; GWTC-5.0 (arXiv:2605.27225) confirms nothing heavier in O4b. RA/Dec = highest-probability pixel of the GWTC-4.0 Mixed+XO4a sky map (computed here; its 90% area 1,663 deg² matches the 1,700 in Table 3). The AGN J131824.85+253342.0 used in the draft is only a flare candidate (arXiv:2511.05144) and is NOT used. */
+  { id:'gw231123', name:'GW231123', sub:'gw', ra:12.77, dec:21.86, z:0.40, aliases:['S231123cg','GW231123_135430'], massSuns:222,
+    desc:'The most massive black hole merger reported so far, seen on 23 November 2023: two black holes of roughly 137 and 101 Suns, both apparently spinning very fast, merged into one of about 222 Suns. Such heavy, fast-spinning black holes are hard to make from single stars, which points to earlier mergers. The signal lasted only about a tenth of a second, so the numbers depend on the waveform model, and its position is known only to a patch of sky of about 1,700 square degrees; the point shown is just the most likely spot in it.',
+    stats:{ 'Date':'23 November 2023', 'Merged':'≈137 + 101 Suns', 'Final black hole':'≈222 Suns (180–250)',
+            'Redshift range':'0.15–0.67', 'Sky position':'Only to a patch ≈1,700 sq. degrees' } },
+  /* GW250114 (08:22:03 UTC): discovery LVK 2025, PRL 135, 111403 (arXiv:2509.08054): m1 33.6 +1.2/−0.8, m2 32.2 +0.8/−1.3, network SNR 80; GWOSC O4 discovery release: Mf 62.7, dL 403 +74/−70 Mpc, z 0.09. Current catalogue GWTC-5.0 (arXiv:2605.27225, Table; GWOSC GWTC-5.0 v2): m1 33.76 +1.28/−0.90, m2 32.26 +0.95/−1.47, Mf 62.9 +1.0/−1.1, χf 0.68, dL 0.40 +0.08/−0.07 Gpc, z 0.09 +0.02/−0.01, ΔΩ 42 deg², SNR 76.9 ("the highest network SNR ever observed"). Horizon area ≈240,000 → ≈400,000 km², 99.999% (Cornell news 10 Sep 2025, citing the PRL). RA/Dec = highest-probability pixel of the GWTC-5.0 IMRPhenomXPHM_SpinTaylor sky map (computed here; 41.8 deg² at 90%). The 90% region is a long arc from RA ≈8.5 h, Dec ≈0° to RA ≈12.4 h, Dec ≈+46°; other waveform maps peak near its other end (≈9.0 h, +13°). */
+  { id:'gw250114', name:'GW250114', sub:'gw', ra:11.22, dec:42.24, z:0.09, aliases:['S250114ax','GW250114_082203'], massSuns:62.9,
+    desc:'The clearest gravitational-wave signal yet, recorded on 14 January 2025: two black holes of about 34 and 32 Suns, near twins of the first ever detected, merged into one of about 63. It was so loud that LIGO could check Hawking\'s 1971 rule that the total horizon area of black holes can never shrink, and found the area grew from about 240,000 to about 400,000 square kilometres. Its position is known only to a thin arc of sky of about 42 square degrees; the point shown is just the most likely spot on it.',
+    stats:{ 'Date':'14 January 2025', 'Merged':'≈34 + 32 Suns', 'Final black hole':'≈63 Suns (61.8–63.9)',
+            'Redshift range':'0.08–0.11', 'Sky position':'Only to a patch ≈42 sq. degrees' } },
   { id:'grb221009a', sizeNote:'This burst was a brief flash from a narrow jet launched by a collapsing star, not an object with a width that can be measured.', name:'GRB 221009A', sub:'grb', ra:19.2176, dec:19.7733, z:0.151, aliases:['BOAT','Brightest Of All Time'],
     desc:'"The BOAT" — the brightest gamma-ray burst ever recorded, on 9 October 2022. A massive star collapsed into a black hole and fired jets aimed near Earth; bursts this bright are thought to reach us once in about ten thousand years.',
     stats:{ 'Date':'9 October 2022', 'Nickname':'Brightest Of All Time' } },
