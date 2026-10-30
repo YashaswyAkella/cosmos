@@ -232,7 +232,7 @@ EXOTIC.forEach(function (b) {
   const v = raDecToVec(b.ra, b.dec, distAU);
   const o = addObject({
     id: b.id, name: b.name, type: b.type, kind: 'blackhole', category: 'blackholes',
-    color: b.color, radiusAU: (b.massSuns ? 2.953 * b.massSuns : b.shadowKm / 2) / AU_KM, fixed: v, data: b, prio: 95, minPx: 2   /* event horizon: 2.953 km of radius per solar mass */
+    color: b.color, radiusAU: (b.massSuns ? 2.953 * b.massSuns : b.shadowKm / 2) / AU_KM, fixed: v, data: b, prio: (b.id === 'sgrA' || b.id === 'm87star') ? 95 : 55, minPx: 2   /* event horizon: 2.953 km of radius per solar mass */
   });
   o.pos = { x: v.x, y: v.y, z: v.z };
 });
@@ -2992,7 +2992,8 @@ function render(dt) {
     const farOut = camFromSunLy > 20000 && selectedId !== o.id && cam.follow !== o.id;
     if (o.kind === 'distant') { drawDistant(o, p); labels.push(o); continue; }
     if (o.kind === 'blackhole') {
-      if (farOut && o.id !== 'sgrA') continue;
+      const chosen = selectedId === o.id || cam.follow === o.id;
+      if (o.data.d > 1e6 ? !(chosen || p.z < 3e5 * LY_AU) : (farOut && o.id !== 'sgrA')) continue;
       drawBlackHole(o, p);
       labels.push(o);
       continue;
@@ -3997,18 +3998,30 @@ function openCategory(catId) {
     const placed = {}; sections.forEach(function (s) { s[1].forEach(function (o) { placed[o.id] = 1; }); });
     const other = list.filter(function (o) { return !placed[o.id]; });
     if (other.length) sections.push(['More', other]);
+  } else if (catId === 'blackholes') {
+    /* smallest to biggest, each nearest first; the quasars, blazars and mergers live in the Deep Universe but are black holes too */
+    const byD = function (a, b) { return a.data.d - b.data.d; };
+    const far = function (o) { return o.data.z != null ? o.data.z : (o.data.dMly || 0) / 14000; };
+    const imbh = function (o) { return !!o.data.imbh || /intermediate/i.test(o.type); };
+    const du = objects.filter(function (o) { return o.kind === 'distant'; });
+    sections = [['Stellar black holes', list.filter(function (o) { return o.data.sub === 'stellarbh'; }).sort(byD)],
+                ['Middleweights', list.filter(function (o) { return o.data.sub !== 'stellarbh' && imbh(o); }).sort(byD)],
+                ['Giants at the hearts of galaxies', list.filter(function (o) { return o.data.sub !== 'stellarbh' && !imbh(o) && !o.data.agn; }).sort(byD)],
+                ['Active galaxies', list.filter(function (o) { return o.data.agn; }).sort(byD)],
+                ['Quasars and blazars', du.filter(function (o) { return ['quasar', 'lensed', 'blazar'].indexOf(o.sub) >= 0; }).sort(function (a, b) { return far(a) - far(b); })],
+                ['Black holes colliding', du.filter(function (o) { return o.sub === 'gw' && o.data.massSuns; }).sort(function (a, b) { return far(a) - far(b); })]];
   }
   if (sections) {
     list = [];
     sections.forEach(function (s) { if (s[1].length) { s[1].sectionTitle = s[0]; list = list.concat([{ section: s[0], count: s[1].length }], s[1]); } });
   }
   list.forEach(function (o) {
-    if (o.section) { heading(o.section + (catId === 'deepuniverse' ? ' · ' + o.count : '')); return; }
+    if (o.section) { heading(o.section + ((catId === 'deepuniverse' || catId === 'blackholes') ? ' · ' + o.count : '')); return; }
     const li = document.createElement('li');
     const badge = o.kind === 'deepfield' ? (o.data.planned ? 'planned' : String(o.data.year))
                 : o.kind === 'constellation' ? o.data.area.toLocaleString() + ' sq°'
                 : o.kind === 'star' ? (o.data.d < 100 ? o.data.d.toFixed(2) + ' ly' : Math.round(o.data.d).toLocaleString() + ' ly')
-                : o.kind === 'blackhole' ? Math.round(o.data.d).toLocaleString() + ' ly'
+                : o.kind === 'blackhole' ? (o.data.d >= 1e9 ? Number((o.data.d / 1e9).toPrecision(2)) + ' Gly' : o.data.d >= 1e6 ? Number((o.data.d / 1e6).toPrecision(3)) + ' Mly' : Math.round(o.data.d).toLocaleString() + ' ly')
                 : o.kind === 'distant' ? (o.data.z != null ? (/· z /.test(o.type) ? '' : 'z ' + o.data.z) : o.data.dMly + ' Mly')   /* the type line already carries z for the far ones */
                 : (o.kind === 'deepsky' && o.category === 'clusters' && o.data.d > 0) ? fmtLy(o.data.d) : '';
     li.innerHTML =
@@ -4170,12 +4183,13 @@ function renderStats(o) {
   dl.innerHTML = '';
   const rows = [];
   const stats = (o.data && o.data.stats) || {};
-  Object.keys(stats).forEach(function (k) { rows.push([k, stats[k]]); });
+  const hasDist = stats['Distance'] != null;                 /* the distance once, not two or three times */
+  Object.keys(stats).forEach(function (k) { if (!(hasDist && k === 'Distance from Sun')) rows.push([k, stats[k]]); });
 
   if (o.kind !== 'region' && o.kind !== 'constellation' && o.kind !== 'deepfield' && o.kind !== 'ngc' && o.kind !== 'distant') {
     const rSun = Math.hypot(o.pos.x, o.pos.y, o.pos.z);
     if (o.kind === 'star' || o.kind === 'blackhole') {
-      rows.push(['Distance from Sun', fmtDist(rSun)]);
+      if (!hasDist && stats['Distance from Sun'] == null) rows.push(['Distance from Sun', fmtDist(rSun)]);
     } else if (o.kind !== 'sun') {
       rows.push(['Distance from Sun', fmtDist(rSun)]);
       const e = byId.earth;
@@ -4875,7 +4889,7 @@ function sizeInfo(o) {
   if (!(o.radiusAU > 0)) return null;
   if (o.kind === 'blackhole') {                             /* 2.953 km of radius per solar mass: a figure worked out from the mass, so say so */
     const m = d.massSuns || d.mass;
-    return { r: o.radiusAU, label: 'Event horizon', what: m ? 'worked out from its mass of ' + (m >= 1e9 ? fmtSuns(m) : m >= 1e6 ? Number((m / 1e6).toPrecision(2)) + ' million Suns' : m + ' Suns') : '', approx: true, look: 'bh' };
+    return { r: o.radiusAU, label: 'Event horizon', what: m ? 'worked out from its mass of ' + (m >= 1e9 ? fmtSuns(m) : m >= 1e6 ? Number((m / 1e6).toPrecision(2)) + ' million Suns' : Number(m.toPrecision(3)).toLocaleString() + ' Suns') : '', approx: true, look: 'bh' };
   }
   return { r: o.sizeR || o.radiusAU, label: o.sizeLabel || 'Diameter', what: o.sizeApprox || o.sizeWhat || '', approx: !!o.sizeApprox,
            look: (o.kind === 'star' || o.kind === 'sun') ? 'star' : o.kind === 'deepsky' ? 'glow' : 'ball' };
@@ -6329,6 +6343,16 @@ deepSlider.addEventListener('keydown', function (e) {
 /* dragging during deep time hands the camera to the viewer; time keeps running */
 canvas.addEventListener('pointerdown', function () { if (deep.on) deep.takeover = true; });
 canvas.addEventListener('wheel', function () { if (deep.on) deep.takeover = true; });
+
+/* a black hole that names its host galaxy is listed in the host's panel too */
+EXOTIC.forEach(function (b) {
+  (b.links || []).forEach(function (h) {
+    const host = byId[h];
+    if (!host || !host.data || host.kind === 'blackhole') return;
+    const L = host.data.links || (host.data.link ? [host.data.link] : []);
+    if (L.indexOf(b.id) < 0) host.data.links = L.concat([b.id]);
+  });
+});
 
 /* ============================================================
    Shareable links
