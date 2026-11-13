@@ -2,7 +2,7 @@
 
 A hand-built 3D map of the cosmos that runs in the browser with no libraries, no build step and no server. Open `index.html` and it just runs.
 
-**Live:** https://YashaswyAkella.github.io/cosmos/
+Check out https://YashaswyAkella.github.io/cosmos/
 
 ## What is in it
 
