@@ -4200,8 +4200,12 @@ function renderStats(o) {
       rows.push(['Absolute magnitude', o.absMag.toFixed(2)]);
     }
     const lightMin = Math.hypot(o.pos.x, o.pos.y, o.pos.z) * 8.317;
-    if (o.kind !== 'sun' && lightMin < 60 * 24) {
-      rows.push(['Light from the Sun', lightMin < 60 ? lightMin.toFixed(1) + ' min' : (lightMin / 60).toFixed(1) + ' hours']);
+    if (o.kind !== 'sun' && lightMin < 60 * 24 * 30) {
+      rows.push(['Light from the Sun', lightMin < 60 ? lightMin.toFixed(1) + ' min' : lightMin < 60 * 24 ? (lightMin / 60).toFixed(1) + ' hours' : (lightMin / 1440).toFixed(3) + ' days']);
+    }
+    if (o.kind === 'probe' && o.mode === 'escape') {                 /* how long a radio message from Earth takes to arrive, live */
+      const e = byId.earth, s = Math.hypot(o.pos.x - e.pos.x, o.pos.y - e.pos.y, o.pos.z - e.pos.z) * 499.004784;
+      rows.push([/silent/i.test(o.type) ? 'Light from Earth' : 'Signal from Earth', fmtHms(s)]);
     }
   }
   rows.forEach(function (r) {
@@ -4636,6 +4640,12 @@ function fmtKm(km) {
   if (km < 1e12) return (km / 1e9).toFixed(2) + ' billion km';
   if (km < 1e15) return (km / 1e12).toFixed(2) + ' trillion km';
   return (km / 1e15).toFixed(2) + ' quadrillion km';
+}
+/* 86,412 s → "1 day 0 h 0 m 12 s"; 83,000 s → "23 h 3 m 20 s" */
+function fmtHms(s) {
+  s = Math.round(s);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return (d ? d + (d === 1 ? ' day ' : ' days ') : '') + h + ' h ' + m + ' m ' + x + ' s';
 }
 function fmtDuration(s) {
   if (!isFinite(s)) return '—';
@@ -5458,6 +5468,7 @@ function frame(now) {
   statTick++;
   ladderTick();
   syncHash(false);
+  if (milestone.on && (deep.on || ladder.on)) milestoneHide(false);
   if (route.open && statTick % 30 === 0) renderRoute();
   /* distances drift as the clock runs, so refresh them a few times a second */
   if (selectedId && byId[selectedId] && statTick % 20 === 0) renderStats(byId[selectedId]);
@@ -6353,6 +6364,50 @@ EXOTIC.forEach(function (b) {
     if (L.indexOf(b.id) < 0) host.data.links = L.concat([b.id]);
   });
 });
+
+/* ============================================================
+   Voyager 1, one light day from Earth
+   JPL Horizons: geocentric one-way light time reaches 1,440 minutes on 2026-11-19 at about 02:17 UTC. The card follows the
+   real clock, not the simulation's, and shows from two weeks before to two weeks after; closing it is remembered.
+   ============================================================ */
+const V1_DAY = Date.UTC(2026, 10, 19, 2, 17), V1_FROM = Date.UTC(2026, 10, 4), V1_UNTIL = Date.UTC(2026, 11, 4);
+const milestone = { on: false };
+function milestoneText() {
+  const now = Date.now();
+  if (now < V1_DAY) {
+    const s = Math.max(0, Math.floor((V1_DAY - now) / 1000)), d = Math.floor(s / 86400);
+    const hms = [Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60].map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+    $('milestoneCount').textContent = 'in ' + (d ? d + (d === 1 ? ' day ' : ' days ') : '') + hms;
+    $('milestoneText').textContent = 'On 19 November 2026 at about 02:17 UTC (the evening of 18 November in the US), Voyager 1 becomes the first spacecraft a full light day from Earth. ' +
+      'A radio message to it will take 24 hours to arrive, and its answer another 24 to come back. It was launched in 1977 and has been travelling ever since.';
+  } else {
+    const d = Math.floor((now - V1_DAY) / 86400000);
+    $('milestoneCount').textContent = d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
+    $('milestoneText').textContent = 'Since 19 November 2026 (02:17 UTC), Voyager 1 has been more than a light day from Earth, the first spacecraft ever this far. ' +
+      'A command sent today arrives tomorrow, and its reply takes another day to come back. It was launched in 1977.';
+  }
+}
+function milestoneHide(remember) {
+  milestone.on = false; $('milestoneCard').classList.add('hidden');
+  if (remember) try { localStorage.setItem('cosmos-v1-lightday', '1'); } catch (e) { /* private window: it simply shows again next time */ }
+}
+(function () {
+  const now = Date.now();
+  let seen = false;
+  try { seen = localStorage.getItem('cosmos-v1-lightday') === '1'; } catch (e) { /* no storage */ }
+  if (now < V1_FROM || now >= V1_UNTIL || seen) return;
+  milestoneText();
+  setTimeout(function () { if (deep.on || ladder.on) return; milestone.on = true; $('milestoneCard').classList.remove('hidden'); }, 1200);
+  setInterval(function () { if (milestone.on) milestoneText(); }, 1000);
+})();
+$('milestoneShow').addEventListener('click', function () {
+  milestoneHide(true);
+  closeRoute(); closeCompare();
+  simJd = jdFromDate(new Date());                                /* the real moment, at real speed */
+  const one = document.querySelectorAll('.speed-btn')[0]; if (one) one.click();
+  select('voyager1'); flyTo('voyager1');
+});
+$('milestoneClose').addEventListener('click', function () { milestoneHide(true); });
 
 /* ============================================================
    Shareable links
