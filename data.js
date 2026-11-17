@@ -206,28 +206,28 @@ const DWARFS = [
    their measured escape asymptote (RA/Dec), anchored to a
    distance at the stated epoch. Good to a few percent; exact
    positions need JPL Horizons ephemerides.                    */
-/* Escaping probes: distance from the Sun, radial speed and direction on 2026-01-01 from JPL Horizons (observer table, Sun centre,
-   quantities 1 and 20; speed in AU/yr = km/s × 0.210945). Voyager 1 reaches one light day (173.1446 AU) from Earth on
-   2026-11-19 at about 02:17 UTC by the same ephemeris (geocentric one-way light time 1440 min). */
+/* Escaping probes: distance from the Sun, radial speed and direction on 2026-01-01 from JPL Horizons geometric state vectors
+   (Sun centre, ICRF, no light-time correction). Voyager 1 is one light day (25,902,068,371 km) from Earth on 2026-11-18 at
+   10:16:07 UTC, 2:16:07 a.m. PST (NASA, "Where are Voyager 1 and Voyager 2 now?"; Horizons geometric range agrees). */
 const PROBES = [
   { id:'voyager1', sizeM:3.7, sizeWhat:'3.7 m dish; its magnetometer boom reaches 13 m', name:'Voyager 1', type:'Interstellar probe', kind:'probe', color:'#8fe3ff',
-    mode:'escape', epoch:'2026-01-01', distAU:169.246, speedAUyr:3.5613, ra:17.2602, dec:12.2222,
-    desc:'The most distant human-made object, and the first to reach one light day from Earth (on 19 November 2026). Launched in 1977, it passed Jupiter and Saturn, turned to take the "Pale Blue Dot" photograph in 1990, and crossed into interstellar space in 2012. Still transmitting.',
-    stats:{ 'Launched':'5 Sept 1977', 'Speed':'16.9 km/s from the Sun', 'One light day from Earth':'19 Nov 2026, ≈ 02:17 UTC', 'Left heliosphere':'25 Aug 2012', 'Power':'Radioisotope, fading' } },
+    mode:'escape', epoch:'2026-01-01', distAU:169.255, speedAUyr:3.5614, ra:17.2602, dec:12.2222,
+    desc:'The most distant human-made object, and the first to reach one light day from Earth (on 18 November 2026). Launched in 1977, it passed Jupiter and Saturn, turned to take the "Pale Blue Dot" photograph in 1990, and crossed into interstellar space in 2012. Still transmitting.',
+    stats:{ 'Launched':'5 Sept 1977', 'Speed':'16.9 km/s from the Sun', 'One light day from Earth':'18 Nov 2026, 10:16 UTC', 'Left heliosphere':'25 Aug 2012', 'Power':'Radioisotope, fading' } },
   { id:'voyager2', sizeM:3.7, sizeWhat:'3.7 m dish; its magnetometer boom reaches 13 m', name:'Voyager 2', type:'Interstellar probe', kind:'probe', color:'#9ad9ff',
-    mode:'escape', epoch:'2026-01-01', distAU:141.706, speedAUyr:3.1731, ra:20.1990, dec:-59.4397,
+    mode:'escape', epoch:'2026-01-01', distAU:141.714, speedAUyr:3.1731, ra:20.1990, dec:-59.4401,
     desc:'The only spacecraft to visit all four giant planets. Launched 16 days before Voyager 1, it reached Uranus in 1986 and Neptune in 1989, and entered interstellar space in 2018.',
     stats:{ 'Launched':'20 Aug 1977', 'Speed':'15.0 km/s from the Sun', 'Flybys':'Jupiter, Saturn, Uranus, Neptune', 'Left heliosphere':'5 Nov 2018' } },
   { id:'pioneer10', sizeM:2.74, sizeWhat:'2.74 m dish; its magnetometer boom reaches 6.6 m', name:'Pioneer 10', type:'Escaped probe (silent)', kind:'probe', color:'#b9a2ff',
-    mode:'escape', epoch:'2026-01-01', distAU:140.058, speedAUyr:2.4962, ra:5.2707, dec:26.0533,
+    mode:'escape', epoch:'2026-01-01', distAU:140.064, speedAUyr:2.4963, ra:5.2708, dec:26.0533,
     desc:'The first spacecraft to cross the asteroid belt and the first to fly past Jupiter. Contact was lost in 2003; it drifts on toward Aldebaran, a journey of about two million years.',
     stats:{ 'Launched':'2 March 1972', 'Last contact':'23 Jan 2003', 'Speed':'11.8 km/s from the Sun', 'Carries':'Pioneer plaque' } },
   { id:'pioneer11', sizeM:2.74, sizeWhat:'2.74 m dish; the spacecraft is 2.9 m long', name:'Pioneer 11', type:'Escaped probe (silent)', kind:'probe', color:'#c0a9ff',
-    mode:'escape', epoch:'2026-01-01', distAU:116.203, speedAUyr:2.3335, ra:18.9564, dec:-8.8508,
+    mode:'escape', epoch:'2026-01-01', distAU:116.208, speedAUyr:2.3335, ra:18.9564, dec:-8.8508,
     desc:'The first probe to reach Saturn, in 1979, where it scouted the path the Voyagers would later take. Silent since 1995.',
     stats:{ 'Launched':'6 April 1973', 'Last contact':'Nov 1995', 'Speed':'11.1 km/s from the Sun', 'Heading':'Toward Scutum' } },
   { id:'newhorizons', sizeM:2.7, sizeWhat:'piano-sized body, about 0.7 × 2.1 × 2.7 m; 2.1 m dish', name:'New Horizons', type:'Kuiper Belt probe', kind:'probe', color:'#ffd08a',
-    mode:'escape', epoch:'2026-01-01', distAU:63.573, speedAUyr:2.8612, ra:19.3063, dec:-20.2046,
+    mode:'escape', epoch:'2026-01-01', distAU:63.576, speedAUyr:2.8612, ra:19.3063, dec:-20.2045,
     desc:'Gave us our first close look at Pluto in July 2015, then flew past the small Kuiper Belt object Arrokoth on New Year\'s Day 2019. Still healthy and still exploring.',
     stats:{ 'Launched':'19 Jan 2006', 'Pluto flyby':'14 July 2015', 'Speed':'13.6 km/s from the Sun', 'Status':'Active' } },
   { id:'jwst', sizeM:21.2, sizeWhat:'sunshield, 21.2 × 14.2 m; 6.5 m mirror', name:'James Webb Telescope', type:'Space observatory', kind:'probe', cat:'telescopes',
@@ -662,7 +662,7 @@ const EVENTS = {
   '10-04': [{ y:1957, t:'Sputnik 1 becomes the first artificial satellite.' }],
   '11-05': [{ y:2018, t:'Voyager 2 crosses into interstellar space.' }],
   '11-13': [{ y:1971, t:'Mariner 9 becomes the first spacecraft to orbit another planet.' }],
-  '11-19': [{ y:2026, t:'Voyager 1 becomes the first spacecraft one light day from Earth: a radio signal now takes a full day to reach it.' }],
+  '11-18': [{ y:2026, t:'Voyager 1 becomes the first spacecraft one light day from Earth: a radio signal now takes a full day to reach it.' }],
   '12-07': [{ y:1995, t:'Galileo arrives at Jupiter and drops a probe into its atmosphere.' }],
   '12-18': [{ y:1995, t:'Hubble begins a ten-day exposure of one empty patch of sky — the Hubble Deep Field.' }],
   '12-25': [{ y:2021, t:'The James Webb Space Telescope launches.' }]
