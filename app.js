@@ -6367,10 +6367,10 @@ EXOTIC.forEach(function (b) {
 
 /* ============================================================
    Voyager 1, one light day from Earth
-   JPL Horizons: geocentric one-way light time reaches 1,440 minutes on 2026-11-19 at about 02:17 UTC. The card follows the
+   NASA: 25.902 billion km from Earth on 18 Nov 2026 at 2:16:07 a.m. PST (10:16:07 UTC); Horizons' geometric range agrees. The card follows the
    real clock, not the simulation's, and shows from two weeks before to two weeks after; closing it is remembered.
    ============================================================ */
-const V1_DAY = Date.UTC(2026, 10, 19, 2, 17), V1_FROM = Date.UTC(2026, 10, 4), V1_UNTIL = Date.UTC(2026, 11, 4);
+const V1_DAY = Date.UTC(2026, 10, 18, 10, 16, 7), V1_FROM = Date.UTC(2026, 10, 4), V1_UNTIL = Date.UTC(2026, 11, 4);
 const milestone = { on: false };
 function milestoneText() {
   const now = Date.now();
@@ -6378,12 +6378,12 @@ function milestoneText() {
     const s = Math.max(0, Math.floor((V1_DAY - now) / 1000)), d = Math.floor(s / 86400);
     const hms = [Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60].map(function (n) { return String(n).padStart(2, '0'); }).join(':');
     $('milestoneCount').textContent = 'in ' + (d ? d + (d === 1 ? ' day ' : ' days ') : '') + hms;
-    $('milestoneText').textContent = 'On 19 November 2026 at about 02:17 UTC (the evening of 18 November in the US), Voyager 1 becomes the first spacecraft a full light day from Earth. ' +
-      'A radio message to it will take 24 hours to arrive, and its answer another 24 to come back. It was launched in 1977 and has been travelling ever since.';
+    $('milestoneText').textContent = 'On 18 November 2026 at 10:16 UTC (2:16 a.m. in California, where JPL is), Voyager 1 becomes the first spacecraft a full light day from Earth: 25.9 billion km, ' +
+      'the distance light travels in 24 hours. A radio message to it then takes a day to arrive, and its answer another day to come back. It was launched in 1977.';
   } else {
     const d = Math.floor((now - V1_DAY) / 86400000);
     $('milestoneCount').textContent = d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago';
-    $('milestoneText').textContent = 'Since 19 November 2026 (02:17 UTC), Voyager 1 has been more than a light day from Earth, the first spacecraft ever this far. ' +
+    $('milestoneText').textContent = 'Since 18 November 2026 (10:16 UTC), Voyager 1 has been more than a light day from Earth, the first spacecraft ever this far. ' +
       'A command sent today arrives tomorrow, and its reply takes another day to come back. It was launched in 1977.';
   }
 }
