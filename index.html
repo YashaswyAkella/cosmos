@@ -230,7 +230,68 @@
     <div class="ladder-hud milestone hidden" id="milestoneCard" role="status">
       <div class="ladder-head"><span class="milestone-title">Voyager 1 · one light day from Earth</span><span class="milestone-count" id="milestoneCount"></span></div>
       <div class="ladder-text" id="milestoneText"></div>
-      <div class="ladder-ctl"><button class="btn tiny primary" id="milestoneShow">Show Voyager 1</button><button class="btn tiny" id="milestoneClose">Close</button></div>
+      <div class="ladder-ctl"><button class="btn tiny primary hidden" id="milestoneStory">Voyager 1's story</button><button class="btn tiny primary" id="milestoneShow">Show Voyager 1</button><button class="btn tiny" id="milestoneClose">Close</button></div>
+    </div>
+
+    <div class="v1story hidden" id="v1Story" role="dialog" aria-modal="true" aria-labelledby="v1StoryTitle">
+      <div class="v1story-sheet">
+        <button class="v1story-x" id="v1StoryX" aria-label="Close">×</button>
+        <img class="v1story-hero" data-src="voyager1-spacecraft.jpg" alt="Artist's view of a Voyager spacecraft, its white dish turned back toward Earth, against the stars">
+        <div class="v1story-body">
+          <div class="v1story-kicker">18 November 2026 · today only</div>
+          <h2 id="v1StoryTitle">Voyager 1 is one light day from Earth</h2>
+          <div class="v1story-live">
+            <div><span>From Earth, right now</span><b id="v1StoryKm">—</b></div>
+            <div><span>A radio signal from Earth takes</span><b id="v1StorySig">—</b></div>
+          </div>
+          <p>At 10:16 UTC today Voyager 1 passed 25,902,068,371 km from Earth, the distance light travels in a day (NASA). Nothing people have built has ever been this far away. A command sent to it now arrives tomorrow, and its answer comes back the day after. It left Earth 49 years ago and is still talking to us, with two instruments measuring the magnetic field and plasma waves of interstellar space.</p>
+
+          <h3>49 years in pictures</h3>
+          <div class="v1story-photos">
+            <figure><div class="pic"><img data-src="voyager1-launch.jpg" style="object-position: center 8%" alt="A Titan-Centaur rocket lifting off in a cloud of smoke"></div>
+              <figcaption><b>5 September 1977.</b> Voyager 1 lifts off on a Titan-Centaur rocket from Cape Canaveral, Florida, 16 days after its twin, Voyager 2.</figcaption></figure>
+            <figure><div class="pic"><img data-src="voyager1-jupiter.jpg" alt="Jupiter's banded clouds, with the Great Red Spot at lower right"></div>
+              <figcaption><b>Jupiter, early 1979.</b> Voyager 1's view on the way in. It flew past on 5 March 1979 and found a faint ring around Jupiter, and two new moons, Metis and Thebe.</figcaption></figure>
+            <figure><div class="pic"><img data-src="voyager1-io.jpg" alt="Io, mottled orange and white, with a blue volcanic plume rising over its left edge"></div>
+              <figcaption><b>Io, March 1979.</b> The blue plume on the left edge is the volcano Loki erupting. Voyager 1 found the first active volcanoes anywhere beyond Earth.</figcaption></figure>
+            <figure><div class="pic"><img data-src="voyager1-saturn.jpg" alt="Saturn and its rings, with two small moons to the left"></div>
+              <figcaption><b>Saturn, 3 November 1980.</b> With its moons Tethys and Dione, from 13 million km. Nine days later Voyager 1 swept past Saturn and its largest moon, Titan.</figcaption></figure>
+            <figure><div class="pic"><img data-src="voyager1-pale-blue-dot.jpg" alt="Bands of scattered sunlight across dark space; Earth is a single pale dot inside one band"><span class="v1story-earth"></span></div>
+              <figcaption><b>The Pale Blue Dot, 14 February 1990.</b> Earth, smaller than a pixel, from about 6 billion km. Voyager 1 switched its cameras off for good 34 minutes later. (NASA's 2020 reprocessing.)</figcaption></figure>
+            <figure><div class="pic"><img class="contain" data-src="voyager1-golden-record.jpg" alt="The gold-plated record and its cover beside a drawing of the Voyager spacecraft"></div>
+              <figcaption><b>The Golden Record.</b> Both Voyagers carry a gold-plated record of Earth: pictures, greetings in 55 languages, music and the sounds of our world, for anyone who might find it.</figcaption></figure>
+          </div>
+
+          <h3>What it did</h3>
+          <ol class="v1story-time">
+            <li><span class="when">5 Sep 1977</span><b>Launch.</b> Two weeks after Voyager 2, on a faster path that let it reach Jupiter and Saturn first.</li>
+            <li><span class="when">5 Mar 1979</span><b>Jupiter.</b> Volcanoes on Io, a ring around Jupiter, two new moons.</li>
+            <li><span class="when">12 Nov 1980</span><b>Saturn and Titan.</b> It found Titan wrapped in a thick nitrogen atmosphere. Flying close to Titan bent its path up out of the plane of the planets, ending its planetary tour and sending it out of the solar system.</li>
+            <li><span class="when">14 Feb 1990</span><b>The family portrait.</b> It turned around and photographed six planets, including the Pale Blue Dot. Then its cameras were switched off for good.</li>
+            <li><span class="when">17 Feb 1998</span><b>The farthest.</b> It overtook Pioneer 10 to become the most distant object people have made, and it has been ever since.</li>
+            <li><span class="when">16 Dec 2004</span><b>Termination shock.</b> At 94 AU, the wind from the Sun around it slowed abruptly from supersonic speed.</li>
+            <li><span class="when">25 Aug 2012</span><b>Interstellar space.</b> At about 122 AU it crossed the heliopause, the edge of the Sun's bubble, the first spacecraft ever to do so.</li>
+            <li><span class="when">Nov 2017</span><b>Old thrusters, new job.</b> Engineers fired thrusters that had not been used for 37 years, and they worked.</li>
+            <li><span class="when">2023 – 2024</span><b>A long-distance repair.</b> A failed memory chip turned its messages into gibberish. Engineers worked out the fault and moved its code around from 24 billion km away; by June 2024 it was sending science again.</li>
+            <li><span class="when">2025</span><b>Revived.</b> The team brought back a set of thrusters thought dead since 2004.</li>
+            <li class="now"><span class="when">18 Nov 2026</span><b>One light day.</b> 25.9 billion km from Earth.</li>
+          </ol>
+
+          <h3>Where it is going</h3>
+          <div class="v1story-future">
+            <div><b>~2075</b>Two light days from Earth (computed, at its 17 km/s). It will be silent long before: NASA hopes to keep one instrument running into the 2030s.</div>
+            <div><b>~300 years</b>To reach the inner edge of the Oort Cloud, the far shell of icy bodies around the Sun. Crossing it may take another 30,000 years (NASA).</div>
+            <div><b>~16,700 years</b>Its closest to Proxima Centauri, Alpha Centauri's small companion, which is drifting our way. Even then: 3.5 light years apart.</div>
+            <div><b>~44,000 years</b>It passes about 1.9 light years from Gliese 445, a small red star in the far northern sky. (NASA's older figure: 1.7 light years in 40,000 years.)</div>
+            <div><b>100,000 years</b>About 5.5 light years from the Sun (computed): farther than Alpha Centauri is today.</div>
+            <div><b>~300,000 years</b>Its closest star of all: the red dwarf TYC 3135-52-1, about 1 light year away: the nearest it comes to any known star.</div>
+          </div>
+          <p style="margin-top: 12px">And Alpha Centauri? Voyager 1 is not headed there. It is climbing north, toward Ophiuchus, about 80° away from Alpha Centauri, which is deep in the southern sky. Even aimed straight at it, Voyager 1 would need about 79,000 years to cover the 4.37 light years (computed, at 16.6 km/s, its speed once the Sun's pull fades). Instead it will drift around the Milky Way with its record, between the stars.</p>
+
+          <p class="v1story-note">Pictures: NASA/JPL-Caltech. Distances: NASA and JPL Horizons; star flybys from Gaia data (Bailer-Jones &amp; Farnocchia 2019). Figures marked computed are this site's own arithmetic.</p>
+          <div class="v1story-ctl"><button class="btn tiny primary" id="v1StoryShow">Show Voyager 1</button><button class="btn tiny" id="v1StoryDone">Close</button></div>
+        </div>
+      </div>
     </div>
 
     <div class="ladder-hud hidden" id="ladderHud">
