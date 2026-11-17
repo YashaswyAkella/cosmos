@@ -6369,6 +6369,8 @@ EXOTIC.forEach(function (b) {
    Voyager 1, one light day from Earth
    NASA: 25.902 billion km from Earth on 18 Nov 2026 at 2:16:07 a.m. PST (10:16:07 UTC); Horizons' geometric range agrees. The card follows the
    real clock, not the simulation's, and shows from two weeks before to two weeks after; closing it is remembered.
+   On the day itself (18 November 2026 by the viewer's own calendar) it shows even if it was closed before, and offers
+   Voyager 1's story: pictures, what it did and where it is going. The story's images load only when it is opened.
    ============================================================ */
 const V1_DAY = Date.UTC(2026, 10, 18, 10, 16, 7), V1_FROM = Date.UTC(2026, 10, 4), V1_UNTIL = Date.UTC(2026, 11, 4);
 const milestone = { on: false };
@@ -6387,15 +6389,18 @@ function milestoneText() {
       'A command sent today arrives tomorrow, and its reply takes another day to come back. It was launched in 1977.';
   }
 }
+function v1IsDay() { const t = new Date(); return t.getFullYear() === 2026 && t.getMonth() === 10 && t.getDate() === 18; }
+const V1_KEY = function () { return v1IsDay() ? 'cosmos-v1-lightday-day' : 'cosmos-v1-lightday'; };
 function milestoneHide(remember) {
   milestone.on = false; $('milestoneCard').classList.add('hidden');
-  if (remember) try { localStorage.setItem('cosmos-v1-lightday', '1'); } catch (e) { /* private window: it simply shows again next time */ }
+  if (remember) try { localStorage.setItem(V1_KEY(), '1'); } catch (e) { /* private window: it simply shows again next time */ }
 }
 (function () {
   const now = Date.now();
   let seen = false;
-  try { seen = localStorage.getItem('cosmos-v1-lightday') === '1'; } catch (e) { /* no storage */ }
+  try { seen = localStorage.getItem(V1_KEY()) === '1'; } catch (e) { /* no storage */ }
   if (now < V1_FROM || now >= V1_UNTIL || seen) return;
+  if (v1IsDay()) { $('milestoneStory').classList.remove('hidden'); $('milestoneShow').classList.remove('primary'); }
   milestoneText();
   setTimeout(function () { if (deep.on || ladder.on) return; milestone.on = true; $('milestoneCard').classList.remove('hidden'); }, 1200);
   setInterval(function () { if (milestone.on) milestoneText(); }, 1000);
@@ -6408,6 +6413,29 @@ $('milestoneShow').addEventListener('click', function () {
   select('voyager1'); flyTo('voyager1');
 });
 $('milestoneClose').addEventListener('click', function () { milestoneHide(true); });
+
+/* the story: live distance from the real clock (the same model as the panels), images fetched on first opening */
+function v1Live() {
+  const jd = jdFromDate(new Date()), v = byId.voyager1, e = helioAt(byId.earth, jd);
+  const d = Math.max(1, v.distAU + v.speedAUday * (jd - v.epochJd));
+  const au = Math.hypot(v.dir.x * d - e.x, v.dir.y * d - e.y, v.dir.z * d - e.z);
+  $('v1StoryKm').textContent = (au * AU_KM / 1e9).toFixed(3) + ' billion km';
+  $('v1StorySig').textContent = fmtHms(au * 499.004784);
+}
+let v1Timer = 0;
+function v1StoryOpen() {
+  const box = $('v1Story');
+  box.querySelectorAll('img[data-src]').forEach(function (im) { im.src = im.getAttribute('data-src'); im.removeAttribute('data-src'); });
+  v1Live(); clearInterval(v1Timer); v1Timer = setInterval(v1Live, 1000);
+  box.classList.remove('hidden'); box.scrollTop = 0; $('v1StoryX').focus();
+}
+function v1StoryClose() { $('v1Story').classList.add('hidden'); clearInterval(v1Timer); }
+$('milestoneStory').addEventListener('click', v1StoryOpen);
+$('v1StoryX').addEventListener('click', v1StoryClose);
+$('v1StoryDone').addEventListener('click', v1StoryClose);
+$('v1StoryShow').addEventListener('click', function () { v1StoryClose(); $('milestoneShow').click(); });
+$('v1Story').addEventListener('click', function (e) { if (e.target === this) v1StoryClose(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('v1Story').classList.contains('hidden')) v1StoryClose(); });
 
 /* ============================================================
    Shareable links
@@ -6520,7 +6548,7 @@ $('routeShare').addEventListener('click', shareView);
 $('compareShare').addEventListener('click', shareView);
 if (location.hash.length > 1) applyHash();
 
-window.OU = { applyHash: applyHash, hashOf: hashOf, resolveRef: resolveRef, shareView: shareView, ladder: ladder, ladderStart: ladderStart, ladderGo: ladderGo, ladderStop: ladderStop, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
+window.OU = { v1StoryOpen: v1StoryOpen, v1StoryClose: v1StoryClose, v1IsDay: v1IsDay, applyHash: applyHash, hashOf: hashOf, resolveRef: resolveRef, shareView: shareView, ladder: ladder, ladderStart: ladderStart, ladderGo: ladderGo, ladderStop: ladderStop, objects: objects, byId: byId, sizeInfo: sizeInfo, skyInfo: skyInfo, sizeWhy: sizeWhy, tripPlace: tripPlace, routeStops: routeStops, compareMode: compareMode, comparePartner: comparePartner, compare: compare, renderCompare: renderCompare, renderRoute: renderRoute, constellationStars: constellationStars, photoRadius: photoRadius, searchBulk: searchBulk, bulk: { stars: bulkStars, sbdb: bulkSbdb, exo: bulkExo, sat: bulkSat, dso: bulkDso, gal: bulkGal }, bulkStarObject: bulkStarObject, bulkSbdbObject: bulkSbdbObject, bulkExoObject: bulkExoObject, bulkSatObject: bulkSatObject, bulkDsoObject: bulkDsoObject, bulkGalObject: bulkGalObject, deep: deep, deepStart: deepStart, deepStop: deepStop, deepSetLog: deepSetLog, deepSetX: deepSetX, DEEP_CH: DEEP_CH, DEEP_X: DEEP_X, MW_ORBIT: MW_ORBIT, scaleFactorAt: scaleFactorAt, earlyState: earlyState, horizonExitGyr: horizonExitGyr, ageAtZ: ageAtZ, futureScale: futureScale, msLife: msLife, starClock: starClock, curatedLife: curatedLife, poleStar: poleStar, sunAt: sunAt, deepXOfSlider: deepXOfSlider, deepSliderOfX: deepSliderOfX, deepShotName: deepShotName, deepHidden: deepHidden, camFrame: camFrame, camAngles: camAngles, get view() { return { camPos: camPos, fwd: fwd, right: right, up: up }; }, get simJd() { return simJd; }, set simJd(v) { simJd = v; }, openCompare: openCompare, bodyFrame: bodyFrame, surfVec: surfVec, discFrame: discFrame, spherePoly: spherePoly, deepList: deepList, MW: MW, STRUCT: STRUCT, cosmicAddress: cosmicAddress, galacticToEcl: galacticToEcl, cosmo: cosmo, COSMO: COSMO, lookAtDir: lookAtDir, openRoute: openRoute, closeRoute: closeRoute, route: route, fmtDuration: fmtDuration, cam: cam, opts: opts, flyTo: flyTo, select: select,
               /* render exactly one frame — useful when the tab is backgrounded
                  and requestAnimationFrame is throttled */
               step: function (dt, noDraw) { dt = dt || 0.016; if (deep.on) deepTick(dt); updatePositions(simJd); if (deep.on) deepWorld(); if (deep.on && !deep.takeover) deepCamera(dt); updateCamera(dt); if (!noDraw) { render(dt); if (deep.on) { deepOverlay(); deepHud(); } } },
